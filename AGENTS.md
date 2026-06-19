@@ -130,6 +130,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Anti-overengineering | `.claude/skills/harness.anti-overengineering/SKILL.md` | Startup-style pragmatic rules |
 | Harness feedback | `docs/harness-feedback.md` + `.claude/skills/harness.feedback/SKILL.md` | Friction you noticed in the harness itself |
 | Linters | `.claude/skills/harness.linters/SKILL.md` | Architecture, code health, doc health, pre-PR gates |
+| Module split | `.claude/skills/harness.module-split/SKILL.md` | Splitting an oversized module into a package without API change |
 | Generators | `.claude/skills/harness.generators/SKILL.md` | Handbook, doc index, TODO sync |
 | CI observability | `.claude/skills/harness.ci/SKILL.md` | Health metrics via GitHub API |
 | Task walkthrough (example) | `docs/TASK_WALKTHROUGH.md` | Understanding the full task flow, auto vs manual |
