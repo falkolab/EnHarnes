@@ -1,4 +1,4 @@
-.PHONY: lint-todos lint-src lint-structural lint-yaml lint-ast lint ci check-docs check-entropy review gen-handbook sync-todos sync-skills sync-indexes worktree obs-up obs-down install-hooks
+.PHONY: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint ci check-docs check-entropy review gen-handbook sync-todos sync-skills sync-indexes worktree obs-up obs-down install-hooks
 
 # Python interpreter. Auto-detects python3 then python; override: make lint PYTHON=/path/to/python
 PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
@@ -28,8 +28,13 @@ lint-yaml:
 lint-ast:
 	ast-grep scan --rule policies/ast-grep/ src/
 
+# Force-push guard: deny/allow table for the validate-bash PreToolUse hook,
+# so the main/master force-push block cannot silently regress.
+lint-hooks:
+	$(PYTHON) scripts/verify/verify_force_push_guard.py
+
 # Composite: all CI-blocking linters
-lint: lint-todos lint-src lint-structural
+lint: lint-todos lint-src lint-structural lint-hooks
 
 # CI alias
 ci: lint

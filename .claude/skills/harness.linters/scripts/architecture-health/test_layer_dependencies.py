@@ -12,6 +12,7 @@ Checks (per docs/harness/GOLDEN_PRINCIPLES.md):
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[5]
@@ -24,7 +25,7 @@ def _load_architecture() -> dict:
     if not yaml_path.exists():
         return {}
     text = yaml_path.read_text(encoding="utf-8")
-    result: dict = {"layers": [], "allowed_imports": {}, "cross_cutting_modules": []}
+    result: dict = {"layers": [], "allowed_imports": {}, "cross_cutting_modules": [], "cross_cutting_layer": ""}
     current_section = None
     current_key = None
     for line in text.splitlines():
@@ -45,6 +46,10 @@ def _load_architecture() -> dict:
             continue
         if stripped.startswith("file_size:"):
             current_section = "file_size"
+            continue
+        if stripped.startswith("cross_cutting_layer:"):
+            result["cross_cutting_layer"] = stripped.split(":", 1)[1].strip()
+            current_section = None
             continue
         if current_section == "layers" and stripped.startswith("- "):
             result["layers"].append(stripped[2:].strip())
@@ -72,6 +77,9 @@ ALLOWED_LAYER_IMPORTS: dict[str, set[str]] = {
     k: set(v) for k, v in _ARCH.get("allowed_imports", {}).items()
 }
 CROSS_CUTTING_MODULES = set(_ARCH.get("cross_cutting_modules", []))
+# The layer allowed to import cross-cutting modules — read from policy, not
+# hardcoded, so renaming the layer in architecture.yaml is picked up here too.
+CROSS_CUTTING_LAYER = _ARCH.get("cross_cutting_layer") or "Providers"
 
 
 def _layer_for_file(path: Path) -> str | None:
@@ -187,7 +195,7 @@ def test_cross_cutting_through_providers_only() -> None:
         if py.name == "__init__.py":
             continue
         layer = _layer_for_file(py)
-        if layer == "Providers":
+        if layer == CROSS_CUTTING_LAYER:
             continue
         for mod in _parse_all_module_names(py):
             root = _module_root(mod)
@@ -195,6 +203,23 @@ def test_cross_cutting_through_providers_only() -> None:
                 rel = py.relative_to(ROOT)
                 violations.append(
                     f"{rel}: imports cross-cutting module '{mod}' directly. "
-                    f"Route through Providers/ instead. See Golden Principle 12."
+                    f"Route through {CROSS_CUTTING_LAYER}/ instead. See Golden Principle 12."
                 )
     assert not violations, "\n".join(violations)
+
+
+def test_no_layer_shadows_stdlib_module() -> None:
+    """A top-level layer package whose name is a Python stdlib module shadows it
+    on the import path (src/ is the import root) and breaks app boot — e.g. a
+    `types` layer hides stdlib `types`, so Django's `from types import ...` fails.
+    Catch it statically (Python 3.10+ `sys.stdlib_module_names`); a boot smoke
+    test in CI covers the rest."""
+    if not LAYERS:
+        return
+    stdlib = getattr(sys, "stdlib_module_names", frozenset())
+    clashes = sorted(layer for layer in LAYERS if layer in stdlib)
+    assert not clashes, (
+        f"Layer name(s) shadow a Python stdlib module: {clashes}. src/ is the "
+        f"import root, so a top-level package with a stdlib name breaks boot — "
+        f"rename the layer (e.g. types -> domain)."
+    )

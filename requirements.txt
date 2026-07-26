@@ -1,2 +1,4 @@
-pytest
-printdirtree
+pytest          # structural tests
+printdirtree    # repo tree snapshots
+PyYAML          # validate_lint_rules.py -> make lint-yaml
+ast-grep-cli    # ast-grep scan          -> make lint-ast

@@ -96,6 +96,39 @@ def find_docs(dir_path: Path) -> list[str]:
     )
 
 
+_PAREN_TAIL_RE = re.compile(r"\s*\(.*\)\s*$")
+
+
+def _doc_field(doc_path: Path, column: str) -> str | None:
+    """Read a metadata field (e.g. 'Status', 'Owner') from a doc's header.
+
+    Scans the header region — lines from the top until the first lone '---'
+    rule or '## ' heading, capped at 40 lines — for a line whose key matches
+    `column` (case-insensitive). Handles markdown styles like
+    '- **Status:** Accepted (2026-06-25)' and 'Status: Draft'. Returns the
+    value with any trailing parenthetical removed, or None if not declared.
+    """
+    try:
+        lines = doc_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    target = column.strip().lower()
+    for raw in lines[:40]:
+        stripped = raw.strip()
+        if stripped == "---" or stripped.startswith("## "):
+            break
+        # Normalize: drop list/quote markers and bold emphasis.
+        norm = stripped.lstrip(">").lstrip().lstrip("-*").strip().replace("**", "")
+        if ":" not in norm:
+            continue
+        key, _, val = norm.partition(":")
+        if key.strip().lower() != target:
+            continue
+        val = _PAREN_TAIL_RE.sub("", val.strip()).strip()
+        return val or None
+    return None
+
+
 def parse_existing_table(text: str) -> dict[str, dict[str, str]]:
     """Parse existing table rows into {filename: {col: value}}."""
     rows: dict[str, dict[str, str]] = {}
@@ -171,20 +204,22 @@ def sync_index(dir_rel: str, title: str, columns: list[str], defaults: dict[str,
                 after_table = "\n" + "\n".join(lines[i:])
                 break
 
-    # Build rows: merge existing data with new files
+    # Build rows: per non-first column, precedence is
+    #   header value (doc declares it) -> existing table value (manual edit) -> default.
     rows = []
     first_col = columns[0]
     for doc in doc_files:
-        if doc in existing:
-            row = dict(existing[doc])
-            # Ensure first column has link format
-            row[first_col] = f"[{doc}]({doc})"
-            rows.append(row)
-        else:
-            row = {first_col: f"[{doc}]({doc})"}
-            for col in columns[1:]:
+        prior = existing.get(doc, {})
+        row = {first_col: f"[{doc}]({doc})"}
+        for col in columns[1:]:
+            header_val = _doc_field(dir_path / doc, col)
+            if header_val:
+                row[col] = header_val
+            elif col in prior:
+                row[col] = prior[col]
+            else:
                 row[col] = defaults.get(col, "—")
-            rows.append(row)
+        rows.append(row)
 
     # Build file content
     table = build_table(columns, rows)

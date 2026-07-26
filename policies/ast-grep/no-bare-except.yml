@@ -5,7 +5,10 @@ message: "Catch specific exceptions, not bare 'except:'. Golden Principle #2 (va
 note: "Replace with: except SomeSpecificError as e:"
 files:
   - src/**/*.py
+# ast-grep >=0.44 rejects a bare `except:` as a top-level pattern (no AST kind).
+# Select the except_clause node and use a regex to keep this to bare excepts —
+# `except ValueError:` / `except (A, B):` have text after `except`, so they
+# don't match `^except\s*:`. Same intent as before, valid under current ast-grep.
 rule:
-  pattern: |
-    except:
-        $$$BODY
+  kind: except_clause
+  regex: '^except\s*:'
