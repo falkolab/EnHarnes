@@ -1,0 +1,28 @@
+# Path-scoped on purpose: verify_worktree_boot.py does real `git worktree add`
+# work against a throwaway repo (including an end-to-end CLI run that builds a
+# virtualenv). Running that on every commit is blast radius without benefit for
+# a script that changes a few times a year — so it runs only when the code it
+# guards (or the verifier itself) changes. Locally: `make verify-worktree`.
+name: Verify worktree boot
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/harness/**'
+      - 'scripts/verify/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/harness/**'
+      - 'scripts/verify/**'
+
+jobs:
+  verify-worktree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Worktree-boot behavioural checks (rooting, bridging, per-worktree venv)
+        run: make verify-worktree
