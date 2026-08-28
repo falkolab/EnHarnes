@@ -102,3 +102,9 @@ Enforced by: `.claude/skills/harness.linters/scripts/code-health/code_convention
 - Fail early and explicitly on invalid input.
 - Make invalid states unrepresentable.
 
+---
+
+**15. No oversized PRs or long-lived branches.**
+Size is a risk axis, not just kind. A `large` ExecPlan must declare independently mergeable milestones in its `## Change-size` section; at PR time a branch's net diff and staleness (commits-behind + wall-clock age) must stay within `policies/size-policy.json` (soft = warn, hard = block). Over-budget work is decomposed before implementation; a genuine exception is a recorded `SIZE-OVERRIDE: <reason>` (a commit-message line at PR time, or a line in the plan's `## Change-size` section at plan time).
+Enforced by: `.claude/skills/harness.linters/scripts/doc-health/plan_size.py` (plan-time, via `make lint-todos`) and `.claude/skills/harness.linters/scripts/change_size.py` (PR-time, via `make review` step 5 + a PR-scoped CI job).
+

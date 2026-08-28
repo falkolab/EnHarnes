@@ -32,7 +32,7 @@ Format and envelope are simple and strict. Each ExecPlan must be one single fenc
 
 When writing an ExecPlan to a Markdown (.md) file where the content of the file *is only* the single ExecPlan, you should omit the triple backticks.
 
-Write in plain prose. Prefer sentences over lists. Avoid checklists, tables, and long enumerations unless brevity would obscure meaning. Checklists are permitted only in the `Progress` section, where they are mandatory. Narrative sections must remain prose-first.
+Write in plain prose. Prefer sentences over lists. Avoid checklists, tables, and long enumerations unless brevity would obscure meaning. Checklists are permitted only in the `Progress` section (where they are mandatory) and in the `## Change-size` section (where a `large` plan lists its milestone PRs — see below). Narrative sections must remain prose-first.
 
 ## Guidelines
 
@@ -144,6 +144,20 @@ Prefer additive code changes followed by subtractions that keep tests passing. P
         pub trait Planner {
             fn plan(&self, observed: &Observed) -> Vec<Action>;
         }
+
+    ## Change-size
+
+    Declare the plan's size so the harness can enforce decomposition (checked by `plan_size.py` via `make lint-todos`). State one line:
+
+        Change-size class: small | medium | large
+
+    Use the file-count bands in `harness.plan/SKILL.md` (small 1-3, medium 4-10, large 10+). A `large` plan MUST also list its milestones here, one bullet per independently mergeable PR, each line ending with the ship token `→ PR`; at least three are required. This is the one checklist permitted outside `Progress`. If an unavoidable large change genuinely cannot be split, add a `SIZE-OVERRIDE: <reason>` line in this section to convert the block into a recorded exception. Example (large):
+
+        Change-size class: large
+
+        - M1 — bootstrap the schema. → PR
+        - M2 — migrate readers. → PR
+        - M3 — migrate writers, remove the old path. → PR
 
 If you follow the guidance above, a single, stateless agent -- or a human novice -- can read your ExecPlan from top to bottom and produce a working, observable result. That is the bar: SELF-CONTAINED, SELF-SUFFICIENT, NOVICE-GUIDING, OUTCOME-FOCUSED.
 
