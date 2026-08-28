@@ -10,10 +10,28 @@ import re
 import sys
 
 
+# A force push to a protected branch can be spelled several ways:
+#   --force / --force-with-lease / --force-if-includes       (long flag form)
+#   -f, or a combined short cluster containing f (-fq, -qf)   (short flag form)
+#   git push origin +main / +HEAD:main / +refs/heads/main    (leading-'+' refspec form)
+# It may also carry global options between `git` and `push` (e.g. `git -C . push`),
+# and the flag may sit before or after the branch. Match all of these.
+# The short-flag alternative must start a token: the (?<![\w-]) lookbehind means
+# it fires on ` -f` but never inside a long option, whether the dash follows
+# another dash (--force, --follow-tags) or a word character (--body-file,
+# gh's --dry-run). Matching mid-option produced false denials on commands that
+# merely mentioned a protected branch elsewhere on the line.
+_FORCE_FLAG = r"(?:--force(?:-with-lease|-if-includes)?|(?<![\w-])-[a-zA-Z]*f[a-zA-Z]*)\b"
+_PUSH = r"\bgit\b[^\n]*?\bpush\b"
+_PROTECTED = r"\b(?:main|master)\b"
+
 BLOCKED_PATTERNS = [
     (r"rm\s+-rf\s+/(?!\S)", "Refusing to rm -rf /"),
-    (r"git\s+push\s+.*--force.*\b(main|master)\b", "Force push to main/master is blocked"),
-    (r"git\s+push\s+.*\b(main|master)\b.*--force", "Force push to main/master is blocked"),
+    # flag form, either order (flag before or after the branch)
+    (rf"{_PUSH}[^\n]*{_FORCE_FLAG}[^\n]*{_PROTECTED}", "Force push to main/master is blocked"),
+    (rf"{_PUSH}[^\n]*{_PROTECTED}[^\n]*{_FORCE_FLAG}", "Force push to main/master is blocked"),
+    # leading-'+' refspec form (a force push that never says "force")
+    (rf"{_PUSH}[^\n]*\+\S*{_PROTECTED}", "Force push to main/master is blocked"),
     (r"git\s+reset\s+--hard\s+origin/(main|master)", "Hard reset to origin main/master is blocked"),
     (r"DROP\s+(DATABASE|TABLE)", "DROP DATABASE/TABLE is blocked"),
     (r"truncate\s+table", "TRUNCATE TABLE is blocked"),
@@ -55,6 +73,10 @@ def main():
     command = data.get("tool_input", {}).get("command", "")
     if not command:
         return
+
+    # Shell joins backslash-newline continuations into one logical line; collapse
+    # them so a wrapped command can't slip a force flag past a per-line matcher.
+    command = re.sub(r"\\\r?\n", " ", command)
 
     for pattern, reason in BLOCKED_PATTERNS:
         if re.search(pattern, command, re.IGNORECASE):

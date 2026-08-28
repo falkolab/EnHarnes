@@ -19,6 +19,8 @@ allowed_imports:
   UI: [Runtime, Service, Config, Types, Providers]  # Rule 3: no Repo
   Providers: [Service, Repo, Config, Types]
 
+cross_cutting_layer: Providers
+
 cross_cutting_modules:
   - auth
   - logging

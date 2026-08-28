@@ -127,7 +127,10 @@ def sync() -> bool:
             changes_made = True
 
     if changes_made:
-        new_table_section = "\n".join(new_table_lines)
+        # Rejoin the table, then guarantee exactly one blank line before the next
+        # '## ' section. splitlines()/join() otherwise collapses the trailing blank
+        # line, gluing the table onto the following heading (breaks Markdown).
+        new_table_section = "\n".join(new_table_lines).rstrip("\n") + "\n\n"
         new_agents = agents_text[:ref_idx] + new_table_section + agents_text[table_end:]
         AGENTS_MD.write_text(new_agents, encoding="utf-8")
         print("\nAGENTS.md updated.")
