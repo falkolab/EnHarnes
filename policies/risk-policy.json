@@ -2,7 +2,7 @@
   "version": 1,
   "description": "When code in a watchPath changes, verify that the listed docs are still accurate.",
   "tiers": ["low", "medium", "high"],
-  "watchPaths": ["src/", ".claude/skills/", "policies/"],
+  "watchPaths": ["src/", ".claude/skills/", "policies/", "scripts/harness/", "scripts/verify/"],
   "docsDriftRules": [
     {
       "watch": "src/",
@@ -36,6 +36,12 @@
       "watch": "policies/",
       "docs": [
         ".claude/skills/harness.core/docs/ENTROPY_PRINCIPLES.md"
+      ]
+    },
+    {
+      "watch": ".claude/hooks/",
+      "docs": [
+        "AGENTS.md"
       ]
     },
     {

@@ -56,7 +56,7 @@ Review the git diff for the current branch against main. Produce a structured re
    If the task prompt handed you a list of things to check, treat it as a floor and
    not a ceiling. The expensive defects are the ones nobody thought to name.
 
-7. If `.claude/skills/startup-anti-overengineering/SKILL.md` exists, read it and check all 12 rules against the changes.
+7. If `.claude/skills/harness.anti-overengineering/SKILL.md` exists, read it and check all 12 rules against the changes.
 
 8. Output a structured review:
 

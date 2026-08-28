@@ -114,4 +114,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        pass  # never blocks, never wedges the edit loop — make lint remains the authority

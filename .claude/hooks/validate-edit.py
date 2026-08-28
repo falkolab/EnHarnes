@@ -147,4 +147,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:  # a guard must not fail OPEN via exit 1 on an odd payload shape
+        hook_io.block(f"validate-edit: internal error — blocking to fail closed: {exc!r}")

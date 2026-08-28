@@ -10,11 +10,13 @@ on:
     paths:
       - 'scripts/harness/**'
       - 'scripts/verify/**'
+      - '.github/workflows/verify-worktree.yml'
   push:
     branches: [ main ]
     paths:
       - 'scripts/harness/**'
       - 'scripts/verify/**'
+      - '.github/workflows/verify-worktree.yml'
 
 jobs:
   verify-worktree:

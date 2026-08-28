@@ -28,7 +28,12 @@ import hook_io  # noqa: E402  (path shim above must run first)
 #     so `.*` spans line breaks. This fails CLOSED — a multi-line command that both
 #     force-pushes and names main/master (even in unrelated segments) is denied. That is the
 #     safe direction for this guard; split such calls if you hit it.
-_GIT_PUSH = r"git(?:\s+(?:-c\s+\S+|-C\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+push\b"
+# One shell word for an option VALUE, allowing embedded quoted spans —
+# `user.name="Coding Agent"`, `"/path with space"`. A bare \S+ here was a
+# bypass: any quoted value containing a space broke the whole _GIT_PUSH match,
+# and with it every force-push pattern built on it.
+_WORD = r"(?:\"[^\"]*\"|'[^']*'|[^\s\"'])+"
+_GIT_PUSH = rf"git(?:\s+(?:-c\s+{_WORD}|-C\s+{_WORD}|--[\w-]+(?:={_WORD})?|-\w))*\s+push\b"
 # Lookbehind (?<![\w-]) anchors the flag to a real token start, so it does not match the
 # "-force" fragment inside an unrelated long flag such as --follow-tags.
 _FORCE = r"(?<![\w-])(?:--force(?:-with-lease|-if-includes)?|-[a-zA-Z]*f[a-zA-Z]*)\b"
@@ -93,4 +98,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:  # a guard must not fail OPEN via exit 1 on an odd payload shape
+        hook_io.block(f"validate-bash: internal error — blocking to fail closed: {exc!r}")
