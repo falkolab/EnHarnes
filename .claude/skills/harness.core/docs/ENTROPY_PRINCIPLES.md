@@ -12,6 +12,7 @@ This document defines what drift looks like and how we fight it.
 - Inconsistent naming across layers
 - Architectural boundary violations introduced incrementally
 - Golden principles that have no corresponding linter check
+- Policy thresholds never calibrated against reality (`policies/size-policy.json` ships placeholder budgets — see its `_calibration` note; recalibrate once the repo has real PR history)
 
 ## Entropy Controls
 

@@ -35,8 +35,27 @@ POLICY_PATH = ROOT / "policies" / "size-policy.json"
 BIG = 10**9  # "no threshold set" sentinel
 
 
+# Git's repo-location variables. Inherited (e.g. from a git hook) they point
+# every git call at whatever repo exported them, so this script would measure
+# the wrong repository. Credential/config vars (GIT_SSH_COMMAND, GIT_ASKPASS,
+# GIT_CONFIG_*) are deliberately kept — same policy as hook_io.git_env().
+_GIT_LOCATION_VARS = (
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_WORK_TREE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_PREFIX",
+)
+
+
+def _git_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARS}
+
+
 def _git(args: list[str], default: str = "") -> str:
-    r = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
+    r = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT, env=_git_env())
     return r.stdout if r.returncode == 0 else default
 
 

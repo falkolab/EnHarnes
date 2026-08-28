@@ -39,9 +39,19 @@ def check_watch_paths() -> None:
 
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
 
-    # Gather changed files from git
+    # Gather changed files from git: working tree + index vs HEAD, PLUS the
+    # branch's own commits vs the integration base. On a fully-committed branch
+    # (the normal pre-PR state) the first two are empty, and reading that as
+    # "no changed files" made this check silently dead exactly when it is
+    # supposed to run.
     changed: set[str] = set()
-    for diff_args in [["--cached", "--name-only"], ["--name-only"]]:
+    diff_specs = [["--cached", "--name-only"], ["--name-only"]]
+    base = change_size.merge_base(
+        change_size.load_policy().get("branch", {}).get("defaultBranch", "main")
+    )
+    if base:
+        diff_specs.append(["--name-only", f"{base}...HEAD"])
+    for diff_args in diff_specs:
         result = subprocess.run(
             ["git", "diff"] + diff_args,
             capture_output=True, text=True, cwd=ROOT,

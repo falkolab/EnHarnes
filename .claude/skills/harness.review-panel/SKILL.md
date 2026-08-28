@@ -1,5 +1,5 @@
 ---
-name: harness.review-panel
+name: harness-review-panel
 description: Use for High-risk changes post-implementation, before a PR/merge — an internal multi-lens review panel that spawns several read-only reviewer subagents in parallel, each with a distinct emphasis (architectural cleanliness / security / completeness+documentation), then arbitrates their verdicts.
 ---
 

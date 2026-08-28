@@ -58,7 +58,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Trigger | Script | What it does |
 |---------|--------|-------------|
 | Before every bash command | `validate-bash.py` (PreToolUse hook) | Blocks dangerous commands (rm -rf, force push, DROP) |
-| Before every file edit | `validate-edit.py` (PreToolUse hook) | Blocks Edit/Write/NotebookEdit when the target file's checkout is on main/master |
+| Before every file edit | `validate-edit.py` (PreToolUse hook) | Blocks Edit/Write/MultiEdit/NotebookEdit when the target file's checkout is on main/master |
 | After every file edit | `post-edit-lint.py` (PostToolUse hook) | ast-grep lints the edited file, reports findings next to the edit (never blocks) |
 | Before every prompt | `prompt-validator.py` (UserPromptSubmit hook) | Blocks secrets in prompts |
 | After every response | `post-response-sync.py` (Stop hook) | Auto-syncs doc indexes if .md files changed |
@@ -76,7 +76,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 |---------|-------------|----------|
 | `make lint-todos` | Task Loop step 2: validate before starting | ~5s |
 | `make lint` | Step 8: after each change (composite: todos + src + structural + yaml + ast + hooks) | ~15s |
-| `make review` | Step 10: pre-PR gate (6 checks: lint + structural + doc-drift + watch-paths + entropy + change-size) | ~2min |
+| `make review` | Step 10: pre-PR gate (5 checks: lint + doc-drift + watch-paths + entropy + change-size) | ~2min |
 | `make check-entropy` | Cadenced: between tasks or weekly | ~1min |
 | `make check-docs` | Cadenced: between tasks or weekly | ~1min |
 | `make gen-handbook` | After significant doc changes | ~2min |
@@ -132,6 +132,8 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Architecture policy | `policies/architecture.yaml` | Setting up layers for a new project |
 | Example project | `.claude/skills/harness.core/example/` | Reference for `src/` layout + `architecture.yaml` |
 | Anti-overengineering | `.claude/skills/harness.anti-overengineering/SKILL.md` | Startup-style pragmatic rules |
+| Debugging protocol | `.claude/skills/debugging-protocol/SKILL.md` | Investigating a bug/failing test before writing a fix |
+| Review panel (multi-lens) | `.claude/skills/harness.review-panel/SKILL.md` | High-risk changes: parallel reviewer subagents + arbitration |
 | Harness feedback | `docs/harness-feedback.md` + `.claude/skills/harness.feedback/SKILL.md` | Friction you noticed in the harness itself |
 | Linters | `.claude/skills/harness.linters/SKILL.md` | Architecture, code health, doc health, pre-PR gates |
 | Module split | `.claude/skills/harness.module-split/SKILL.md` | Splitting an oversized module into a package without API change |

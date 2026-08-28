@@ -173,6 +173,13 @@ def check_validate_bash() -> None:
     record(proc.returncode == 2, "validate-bash: unparsable payload fails CLOSED (exit 2)",
            f"rc={proc.returncode}")
 
+    # A JSON-valid but non-string command must BLOCK (exit 2), not crash with
+    # exit 1 — Claude Code reads a non-2 error as non-blocking, i.e. fail-open.
+    proc = run_hook("validate-bash.py", pre_tool_use("Bash", {"command": 123}))
+    record(proc.returncode in (0, 2) and proc.returncode != 1,
+           "validate-bash: non-string command does not fail OPEN via exit 1",
+           f"rc={proc.returncode} stderr={proc.stderr[:160]!r}")
+
     proc = run_hook("validate-bash.py", pre_tool_use("Read", {"file_path": "README.md"}))
     record(proc.returncode == 0 and decision_of(proc) is None,
            "validate-bash: ignores non-Bash tools", f"rc={proc.returncode}")
@@ -300,6 +307,14 @@ def check_validate_edit(tmp: Path) -> None:
                     pre_tool_use("Edit", {"some_future_key": "/tmp/x"}, cwd=str(repo)), cwd=repo)
     record(proc.returncode == 2,
            "validate-edit: an edit tool with no resolvable path fails CLOSED",
+           f"rc={proc.returncode} stderr={proc.stderr[:160]!r}")
+
+    # A JSON-valid but non-string file_path must fail CLOSED (exit 2), not crash
+    # with exit 1, which Claude Code reads as a non-blocking error (fail-open).
+    proc = run_hook("validate-edit.py",
+                    pre_tool_use("Edit", {"file_path": 123}, cwd=str(repo)), cwd=repo)
+    record(proc.returncode == 2,
+           "validate-edit: a non-string target path fails CLOSED (exit 2, not a crash)",
            f"rc={proc.returncode} stderr={proc.stderr[:160]!r}")
 
     # git unavailable → must block, not error out with a non-blocking exit 1.

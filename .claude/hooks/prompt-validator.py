@@ -50,4 +50,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        pass  # best-effort scanner — a hook bug must not wedge every prompt

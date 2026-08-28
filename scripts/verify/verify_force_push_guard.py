@@ -27,6 +27,11 @@ CASES = [
     ("git push --force-with-lease origin main", "deny"),
     ("git push --force-if-includes origin master", "deny"),
     ("git -c http.sslVerify=false push -f origin master", "deny"),   # global opt before push
+    # option VALUES containing spaces (quoted) — a \S+-based option grammar
+    # breaks on these and silently waves the force-push through:
+    ('git -c user.name="Coding Agent" push --force origin main', "deny"),
+    ('git -c http.extraHeader="Authorization: Bearer x" push --force origin main', "deny"),
+    ('git -C "/path with space" push -f origin main', "deny"),
     ("git push -f origin feature:refs/heads/main", "deny"),     # two-sided refspec, dst = main
     # split across lines — must span the break (re.DOTALL), all continuation flavours + bare \n
     ("git push --force \\\n  origin main", "deny"),             # backslash-newline continuation
