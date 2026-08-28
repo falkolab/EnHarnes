@@ -15,7 +15,7 @@
 
 **Архитектура исходного кода (`src/`):**
 
-> **NOTE:** The layers below are an EXAMPLE for this project (EnHarnes). When bootstrapping a new project, define your own layers in `policies/architecture.yaml` based on your RFP — do NOT copy these verbatim.
+> **NOTE:** The layers below are an example for this project (EnHarnes). When bootstrapping a new project, define your own layers in `policies/architecture.yaml` based on your RFP — do NOT copy these verbatim.
 
 Каждый бизнес-домен продукта имеет строго фиксированную структуру папок. Зависимости могут идти **только в одном направлении** по цепочке, определённой в `policies/architecture.yaml`. Агент обязан парсить данные на границах этих слоев.
 
