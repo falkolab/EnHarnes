@@ -14,10 +14,32 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install pytest
+        run: pip install -r requirements.txt
 
       - name: Lint (TODO + source + structural)
         run: make lint
 
       - name: Doc-drift check (risk-policy.json)
         run: python3 .claude/skills/harness.linters/scripts/doc-health/check_doc_drift.py
+
+  change-size:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The PR HEAD itself, not the synthetic merge ref: the merge commit
+          # already contains main, which would report "0 commits behind" and
+          # defeat the staleness check.
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Full history: the base SHA and origin/main must be present even on
+          # a branch older than the default shallow horizon — exactly the stale
+          # branches this job polices.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Change-size budget (diff size + branch staleness vs size-policy.json)
+        env:
+          CHANGE_SIZE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 .claude/skills/harness.linters/scripts/change_size.py

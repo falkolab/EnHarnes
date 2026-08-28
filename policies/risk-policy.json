@@ -37,6 +37,18 @@
       "docs": [
         ".claude/skills/harness.core/docs/ENTROPY_PRINCIPLES.md"
       ]
+    },
+    {
+      "watch": "scripts/harness/",
+      "docs": [
+        ".claude/skills/harness.core/docs/WORKTREE_WORKFLOW.md"
+      ]
+    },
+    {
+      "watch": "scripts/verify/",
+      "docs": [
+        ".claude/skills/harness.linters/SKILL.md"
+      ]
     }
   ]
 }

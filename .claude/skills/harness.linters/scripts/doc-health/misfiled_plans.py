@@ -6,23 +6,31 @@ The dev-loop relocates a plan to `done/` on completion, but that was an inferred
 convention, not a codified step — easy to drop right when attention is on
 verify/review/commit (see docs/harness-feedback.md, 2026-06-17).
 
-This turns the convention into a deterministic check. To stay high-precision —
-a false positive would block CI on a legitimately in-flight plan, which is worse
-than the status quo — a plan counts as "complete" only when BOTH signals agree:
+This turns the convention into a deterministic check. The completion signal is a
+fully-checked Progress list: at least one checkbox and zero unchecked `- [ ]`
+boxes. Active plans carry open boxes, so a plan claiming every milestone done
+while sitting in `active/` is self-contradictory state.
 
-  1. Progress is done: it has at least one Progress checkbox and zero unchecked
-     `- [ ]` boxes (a crisp signal — active plans carry open boxes, done plans
-     don't).
-  2. Outcomes is filled: the `## Outcomes & Retrospective` section has real
-     content, not a placeholder. Placeholders that mean "not done yet":
-       - "(To be filled in at completion.)"
-       - "To be written when the task closes ..."
-       - "(REPLACE ME)"
-       - the template guidance line from OPENAI_PLANS.md
-       - whitespace only
+A filled `## Outcomes & Retrospective` section is a second, independent signal.
+It sharpens the message but is NOT a precondition. It used to be one, and that
+made the whole check opt-in: `_section_body()` returned None for a plan without
+the section, the loop skipped it, and a plan with every box ticked could sit in
+`active/` indefinitely by never adding a section nothing required — caught by a
+human rather than by CI.
 
-Any plan in `active/` that satisfies both is self-contradictory state and gets
-flagged with the fix: git mv it to done/.
+Placeholders meaning "Outcomes not written yet":
+  - "(To be filled in at completion.)"
+  - "To be written when the task closes ..."
+  - "(REPLACE ME)"
+  - the template guidance line from OPENAI_PLANS.md
+  - whitespace only
+
+A plan that is genuinely still in flight must SAY so with an unchecked box for the
+work that remains. Do NOT add a box for merging the PR: the plan travels inside
+the branch, so the merge is what files it under `done/` — a merge checkbox can
+never be ticked before the merge, which would force a second closing PR just to
+tick it and move the file. The plan moves to `done/` in the SAME PR that delivers
+the work.
 
 Runs via `make lint-todos` / `make lint` and standalone.
 """
@@ -97,21 +105,28 @@ def main() -> int:
     offenders: list[str] = []
     for plan in sorted(ACTIVE_DIR.glob("*.md")):
         text = plan.read_text(encoding="utf-8")
+        if not _progress_done(text):
+            continue  # open boxes (or no boxes at all) — legitimately in flight
         body = _section_body(text)
-        if body is None:
-            continue  # no Outcomes section yet — not a completion signal
-        # High precision: require BOTH signals (all milestones checked AND a
-        # filled Outcomes) before declaring the plan complete-but-misfiled.
-        if _progress_done(text) and _is_filled(body):
-            offenders.append(plan.name)
+        # A missing Outcomes section is absence of evidence, not evidence of
+        # in-flight work: it must not excuse a plan whose every box is ticked.
+        outcomes_filled = body is not None and _is_filled(body)
+        offenders.append((plan.name, outcomes_filled))
 
     if offenders:
         print("Misfiled ExecPlan errors:")
-        for name in offenders:
+        for name, outcomes_filled in offenders:
+            why = (
+                "'Outcomes & Retrospective' is filled in and every Progress box is "
+                "checked, so the plan is complete"
+                if outcomes_filled
+                else "every Progress box is checked, so the plan claims to be complete"
+            )
             print(
-                f"  [ERROR] docs/exec-plans/active/{name}: "
-                f"'Outcomes & Retrospective' is filled in, so the plan is complete "
-                f"but still in active/. Fix: git mv it to docs/exec-plans/done/."
+                f"  [ERROR] docs/exec-plans/active/{name}: {why} but it is still in "
+                f"active/. Fix: git mv it to docs/exec-plans/done/ — or, if work "
+                f"really remains, add an unchecked box for it. Never a box for "
+                f"merging: the plan ships with the branch."
             )
         return 1
 

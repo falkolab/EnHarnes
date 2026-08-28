@@ -20,7 +20,10 @@ OWNER_RE = re.compile(r"TODO:\s*\[(HUMAN|AI|AI->HUMAN)\]")
 errors: list[str] = []
 
 for file_path in ROOT.rglob("*.md"):
-    if ".git/" in str(file_path):
+    fp_str = str(file_path)
+    # Skip .git and nested task worktrees (.claude/worktrees/<task>/… is a full
+    # checkout of another branch — its files belong to that task, not this lint).
+    if ".git/" in fp_str or ".claude/worktrees/" in fp_str:
         continue
 
     for idx, line in enumerate(file_path.read_text(encoding="utf-8").splitlines(), start=1):
