@@ -9,6 +9,35 @@
             "command": "$(command -v python3 || command -v python) .claude/hooks/validate-bash.py"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$(command -v python3 || command -v python) .claude/hooks/validate-edit.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$(command -v python3 || command -v python) .claude/hooks/post-edit-lint.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$(command -v python3 || command -v python) .claude/hooks/log-agent-usage.py"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -27,17 +56,6 @@
           {
             "type": "command",
             "command": "$(command -v python3 || command -v python) .claude/hooks/post-response-sync.py"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/log-agent-usage.py"
           }
         ]
       }
