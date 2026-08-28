@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "Change-size guardrails: soft threshold = warn, hard threshold = block. Override any PR-time block with a commit-message line 'SIZE-OVERRIDE: <reason>' in the range merge-base(origin/main,HEAD)..HEAD; override a plan-time block with a 'SIZE-OVERRIDE: <reason>' line inside the plan's '## Change-size' section.",
+  "overrideToken": "SIZE-OVERRIDE:",
+  "diff": {
+    "warnLines": 400,
+    "blockLines": 800,
+    "warnFiles": 15,
+    "blockFiles": 30,
+    "excludeGlobs": [
+      "*.lock",
+      "package-lock.json",
+      "**/package-lock.json",
+      "**/poetry.lock",
+      "docs/generated/**",
+      "*.svg",
+      "*.png",
+      "*.jpg",
+      "*.ico"
+    ]
+  },
+  "branch": {
+    "defaultBranch": "main",
+    "warnCommitsBehind": 20,
+    "blockCommitsBehind": 50,
+    "warnAgeDays": 7,
+    "blockAgeDays": 14,
+    "_ageNote": "age = wall-clock now minus the committer timestamp of the branch's first unique commit"
+  },
+  "plan": {
+    "sectionHeading": "## Change-size",
+    "classMarker": "Change-size class:",
+    "milestoneShipToken": "→ PR",
+    "minMilestonesWhenLarge": 3,
+    "_forge": "milestoneShipToken is forge terminology. On GitLab set it to '→ MR' (Gitea/Forgejo also say PR); plan_size.py reads the token from here, nothing else changes."
+  },
+  "_calibration": "Placeholder thresholds. Calibrate before trusting the block tier: iterate recent single-purpose commits on main (git log --format=%H -20 origin/main; git diff --numstat <c>^..<c>) or read per-PR stats from your forge's API. If the repo merges fast-forward-only, git log --merges finds nothing — measure commits, not merge commits."
+}

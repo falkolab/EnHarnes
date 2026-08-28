@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""pre_pr_gate.py — Pre-PR gate: runs 4 checks equivalent to CI.
+"""pre_pr_gate.py — Pre-PR gate: runs 5 checks equivalent to CI.
 
 Steps:
   1. Lint (make lint) — TODO linter + code conventions + structural
   2. Doc-drift (check_doc_drift.py) — risk-policy.json references
   3. Watch-path reminders — changed files matching risk-policy watch paths
   4. Entropy spot-check — orphan scripts, blank setpoints
+  5. Change-size budget — diff size + branch staleness vs policies/size-policy.json
 
 Exit code:
   0 — all checks passed, ready for PR
@@ -20,6 +21,8 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+
+import change_size  # same directory (scripts/)
 
 ROOT = Path(__file__).resolve().parents[4]
 
@@ -83,12 +86,12 @@ def main() -> int:
     failures = 0
 
     # 1. Lint (composite: lint-todos + lint-src + lint-structural)
-    print("\n-- Step 1/4: Lint --")
+    print("\n-- Step 1/5: Lint --")
     if run_make("lint") != 0:
         failures += 1
 
     # 2. Doc-drift
-    print("\n-- Step 2/4: Doc-drift check --")
+    print("\n-- Step 2/5: Doc-drift check --")
     rc = subprocess.run(
         [sys.executable, str(ROOT / ".claude/skills/harness.linters/scripts/doc-health/check_doc_drift.py")], cwd=ROOT,
     ).returncode
@@ -96,12 +99,17 @@ def main() -> int:
         failures += 1
 
     # 3. Watch-path reminders
-    print("\n-- Step 3/4: Changed-file doc reminders --")
+    print("\n-- Step 3/5: Changed-file doc reminders --")
     check_watch_paths()
 
     # 4. Entropy spot-check
-    print("\n-- Step 4/4: Entropy spot-check --")
+    print("\n-- Step 4/5: Entropy spot-check --")
     run_entropy()
+
+    # 5. Change-size budget (diff size + branch staleness; warn→block, overridable)
+    print("\n-- Step 5/5: Change-size budget --")
+    if change_size.run_report() != 0:
+        failures += 1
 
     print("\n================================")
     if failures > 0:
