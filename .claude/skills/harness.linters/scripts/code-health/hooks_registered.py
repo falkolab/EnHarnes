@@ -52,8 +52,24 @@ def _registered_commands(sources: list[Path]) -> str:
     return "\n".join(blob)
 
 
+def _is_hook(path: Path) -> bool:
+    """A hook is an executable entry point; a shared library module is not.
+
+    `hook_io.py` (the wire-contract module the hooks import) lives in the same
+    directory but is never registered — requiring registration for it would force
+    a fake settings entry. The discriminator is the entry-point guard every
+    actual hook carries.
+    """
+    if path.name == "__init__.py":
+        return False
+    try:
+        return 'if __name__ == "__main__"' in path.read_text(encoding="utf-8")
+    except OSError:
+        return True  # unreadable: keep it in scope rather than silently exempting
+
+
 def main() -> int:
-    hook_files = sorted(p for p in HOOKS_DIR.glob("*.py") if p.name != "__init__.py")
+    hook_files = sorted(p for p in HOOKS_DIR.glob("*.py") if _is_hook(p))
     if not hook_files:
         print("[hooks-registered] OK: no hook scripts to check.")
         return 0

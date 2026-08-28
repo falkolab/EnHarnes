@@ -1,0 +1,5 @@
+# ast-grep project config. Lets `ast-grep scan` discover the whole rule set as a
+# directory — the CLI's `--rule` flag takes a single file, so a directory of
+# rules needs this config. Used by `make lint-ast` (ast-grep scan -c sgconfig.yml src/).
+ruleDirs:
+  - policies/ast-grep

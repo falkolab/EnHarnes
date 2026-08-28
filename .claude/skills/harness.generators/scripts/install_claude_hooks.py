@@ -27,6 +27,8 @@ from pathlib import Path
 # The command uses $CLAUDE_PROJECT_DIR so it resolves from whatever checkout runs it.
 CANONICAL = [
     ("PreToolUse", "Bash", "validate-bash.py", "Validating bash command"),
+    ("PreToolUse", "Edit|Write|MultiEdit|NotebookEdit", "validate-edit.py", "Checking the target file's branch"),
+    ("PostToolUse", "Edit|Write|MultiEdit", "post-edit-lint.py", "Linting the edited file"),
     ("UserPromptSubmit", None, "prompt-validator.py", "Scanning prompt for secrets"),
     ("PostToolUse", "Task", "log-agent-usage.py", "Logging subagent launch"),
     ("Stop", None, "post-response-sync.py", "Syncing doc indexes"),

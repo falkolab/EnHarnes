@@ -8,6 +8,10 @@ Blocks if a likely secret is detected.
 import json
 import re
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import hook_io  # noqa: E402  (path shim above must run first)
 
 SECRET_PATTERNS = [
     (r"(?i)(api[_-]?key|apikey)\s*[:=]\s*[\"']?[a-zA-Z0-9]{20,}", "API key detected"),
@@ -21,13 +25,15 @@ SECRET_PATTERNS = [
 
 
 def main():
-    try:
-        data = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError):
+    # read_event(), not require_event(): this hook is a best-effort scanner over
+    # text the user already typed, not a gate on an action. Blocking every prompt
+    # whose payload failed to parse would wedge the session over a hook bug, and
+    # a prompt is not a destructive operation the way a bash command is.
+    event = hook_io.read_event()
+    if event is None:
         return
 
-    # Claude Code passes the prompt under the snake_case key "prompt".
-    prompt = data.get("prompt", "")
+    prompt = event.prompt
     if not prompt:
         return
 

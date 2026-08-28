@@ -5,33 +5,45 @@ Reads tool input from stdin, returns JSON decision to stdout.
 Blocks: rm -rf /, force pushes to main, dropping databases, etc.
 """
 
-import json
 import re
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import hook_io  # noqa: E402  (path shim above must run first)
 
 
-# A force push to a protected branch can be spelled several ways:
-#   --force / --force-with-lease / --force-if-includes       (long flag form)
-#   -f, or a combined short cluster containing f (-fq, -qf)   (short flag form)
-#   git push origin +main / +HEAD:main / +refs/heads/main    (leading-'+' refspec form)
-# It may also carry global options between `git` and `push` (e.g. `git -C . push`),
-# and the flag may sit before or after the branch. Match all of these.
-# The short-flag alternative must start a token: the (?<![\w-]) lookbehind means
-# it fires on ` -f` but never inside a long option, whether the dash follows
-# another dash (--force, --follow-tags) or a word character (--body-file,
-# gh's --dry-run). Matching mid-option produced false denials on commands that
-# merely mentioned a protected branch elsewhere on the line.
-_FORCE_FLAG = r"(?:--force(?:-with-lease|-if-includes)?|(?<![\w-])-[a-zA-Z]*f[a-zA-Z]*)\b"
-_PUSH = r"\bgit\b[^\n]*?\bpush\b"
-_PROTECTED = r"\b(?:main|master)\b"
+# --- Force-push-to-main guard ---
+# Scoped to main/master ONLY — feature-branch force-push (needed after a rebase under the
+# fast-forward-only merge policy) stays allowed. Rewriting published main is an owner-run
+# exception (see AGENTS.md), never an automated agent step.
+#
+# Catches, beyond a plain `--force`:
+#   * short `-f` and combined short flags (`-fq`, `-qf`)
+#   * `--force-with-lease` / `--force-if-includes`
+#   * the `+refspec` force form (`git push origin +main`, `+HEAD:main`, `+refs/heads/main`)
+#   * global options between `git` and `push` (`git -c k=v push …`, `git -C path push …`)
+#   * force flag / target split across lines — continuations (`\<newline>`, CRLF, trailing
+#     whitespace) AND bare newlines inside `$(…)`/quotes: the patterns match with re.DOTALL
+#     so `.*` spans line breaks. This fails CLOSED — a multi-line command that both
+#     force-pushes and names main/master (even in unrelated segments) is denied. That is the
+#     safe direction for this guard; split such calls if you hit it.
+_GIT_PUSH = r"git(?:\s+(?:-c\s+\S+|-C\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+push\b"
+# Lookbehind (?<![\w-]) anchors the flag to a real token start, so it does not match the
+# "-force" fragment inside an unrelated long flag such as --follow-tags.
+_FORCE = r"(?<![\w-])(?:--force(?:-with-lease|-if-includes)?|-[a-zA-Z]*f[a-zA-Z]*)\b"
+# main/master only as a whole ref token: preceded by a separator (space, /, :, +) and NOT
+# glued to more branch-name characters (- or / or word chars). So `feature/main-fix`,
+# `feature/domain-main`, `release/master-cutover` are NOT treated as the main/master ref,
+# while `main`, `+main`, `HEAD:main`, `refs/heads/main` are.
+_MAIN = r"(?<=[\s/:+])(?:main|master)(?![\w/-])"
+_FORCE_MAIN = "Force push to main/master is blocked (owner-run exception only — see AGENTS.md)"
 
 BLOCKED_PATTERNS = [
     (r"rm\s+-rf\s+/(?!\S)", "Refusing to rm -rf /"),
-    # flag form, either order (flag before or after the branch)
-    (rf"{_PUSH}[^\n]*{_FORCE_FLAG}[^\n]*{_PROTECTED}", "Force push to main/master is blocked"),
-    (rf"{_PUSH}[^\n]*{_PROTECTED}[^\n]*{_FORCE_FLAG}", "Force push to main/master is blocked"),
-    # leading-'+' refspec form (a force push that never says "force")
-    (rf"{_PUSH}[^\n]*\+\S*{_PROTECTED}", "Force push to main/master is blocked"),
+    (rf"{_GIT_PUSH}.*{_FORCE}.*{_MAIN}", _FORCE_MAIN),       # force flag, then main/master
+    (rf"{_GIT_PUSH}.*{_MAIN}.*{_FORCE}", _FORCE_MAIN),       # main/master, then force flag
+    (rf"{_GIT_PUSH}.*\+\S*{_MAIN}", _FORCE_MAIN),            # +refspec force form
     (r"git\s+reset\s+--hard\s+origin/(main|master)", "Hard reset to origin main/master is blocked"),
     (r"DROP\s+(DATABASE|TABLE)", "DROP DATABASE/TABLE is blocked"),
     (r"truncate\s+table", "TRUNCATE TABLE is blocked"),
@@ -47,46 +59,37 @@ ASK_PATTERNS = [
     (r"pip\s+install(?!.*-r\s+requirements)", "Installing package outside requirements.txt — confirm?"),
 ]
 
+# .* must span newlines so a force flag / target split across lines cannot slip through.
+_FLAGS = re.IGNORECASE | re.DOTALL
 
-def _emit(decision: str, reason: str) -> None:
-    """Emit a PreToolUse permission decision in Claude Code's current schema."""
-    json.dump({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": decision,
-            "permissionDecisionReason": reason,
-        },
-    }, sys.stdout)
+
+def decide(command: str):
+    """Return (decision, reason) for a command, or None if nothing matches."""
+    for pattern, reason in BLOCKED_PATTERNS:
+        if re.search(pattern, command, _FLAGS):
+            return "deny", reason
+    for pattern, reason in ASK_PATTERNS:
+        if re.search(pattern, command, _FLAGS):
+            return "ask", reason
+    return None
 
 
 def main():
-    try:
-        data = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError):
+    # Fails closed: an unparsable payload blocks rather than waving the command
+    # through. This guard is the last line in front of destructive commands.
+    event = hook_io.require_event("validate-bash")
+
+    if event.tool_name != "Bash":
         return
 
-    # Claude Code passes snake_case keys (tool_name / tool_input).
-    tool_name = data.get("tool_name", "")
-    if tool_name != "Bash":
-        return
-
-    command = data.get("tool_input", {}).get("command", "")
+    command = event.command
     if not command:
         return
 
-    # Shell joins backslash-newline continuations into one logical line; collapse
-    # them so a wrapped command can't slip a force flag past a per-line matcher.
-    command = re.sub(r"\\\r?\n", " ", command)
-
-    for pattern, reason in BLOCKED_PATTERNS:
-        if re.search(pattern, command, re.IGNORECASE):
-            _emit("deny", reason)
-            return
-
-    for pattern, reason in ASK_PATTERNS:
-        if re.search(pattern, command, re.IGNORECASE):
-            _emit("ask", reason)
-            return
+    result = decide(command)
+    if result is not None:
+        decision, reason = result
+        hook_io.permission(decision, reason)
 
 
 if __name__ == "__main__":
