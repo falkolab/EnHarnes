@@ -27,7 +27,7 @@ jobs:
           make check-entropy 2>&1 | tee entropy-report.txt
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
-      - name: Auto-fix: remove orphan TODO markers without owners
+      - name: 'Auto-fix: remove orphan TODO markers without owners'
         if: steps.entropy.outputs.exit_code != '0'
         run: |
           # Fix TODOs without owner markers (add [AI] as default)
