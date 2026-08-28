@@ -26,6 +26,9 @@ owner_re = re.compile(r"TODO:\s*\[(HUMAN|AI|AI->HUMAN)\]")
 
 counts = {"HUMAN": 0, "AI": 0, "AI->HUMAN": 0}
 for p in root.rglob("*.md"):
+    p_str = str(p)
+    if ".git/" in p_str or ".claude/worktrees/" in p_str:
+        continue  # skip nested task worktrees (other branches' checkouts)
     for line in p.read_text(encoding="utf-8").splitlines():
         m = owner_re.search(line)
         if m:

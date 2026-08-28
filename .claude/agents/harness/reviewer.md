@@ -29,9 +29,36 @@ Review the git diff for the current branch against main. Produce a structured re
    - Does a corresponding test exist?
    - Are error paths and edge cases covered?
 
-6. If `.claude/skills/startup-anti-overengineering/SKILL.md` exists, read it and check all 12 rules against the changes.
+6. **Resolve every claim the diff makes about things outside the diff.** The steps
+   above compare the code against *rules*; this one compares it against *reality*.
+   A claim you could not resolve is a finding, not a footnote.
 
-7. Output a structured review:
+   - **Named entities must exist.** Every file path, doc section, config key,
+     Failure Ledger entry, ADR, issue or PR that the code or a comment points at —
+     open it. `grep` the name across the repo; if the only hit is the pointer
+     itself, the pointer is dangling, and that is a defect.
+   - **External contracts must be verified, not assumed.** Where the code depends
+     on a third-party shape — a tool's input keys, an API payload, an exit-code
+     convention, an environment variable — check the authority (the installed
+     binary, the vendored source, the live schema), never a prose summary. State
+     which authority you used.
+   - **Coverage claims must be proved per member.** Where something asserts it
+     handles a *set* — a matcher listing tools, a dispatch table, an allowlist, a
+     set of extensions — take each member and trace it through the code. One member
+     that differs from its siblings (its own key name, its own path shape) is the
+     classic silent hole: the set says "covered", the code covers all but one.
+   - **A passing test is not evidence.** For every new assertion, ask what would
+     keep it green while the behaviour it guards is broken. Assertions coarser than
+     that behaviour are findings: an exit code where several paths share it, a
+     filename where the wiring is what matters, an imported function where the bug
+     would live in I/O.
+
+   If the task prompt handed you a list of things to check, treat it as a floor and
+   not a ceiling. The expensive defects are the ones nobody thought to name.
+
+7. If `.claude/skills/startup-anti-overengineering/SKILL.md` exists, read it and check all 12 rules against the changes.
+
+8. Output a structured review:
 
 ```
 ## Agent Review Report
@@ -55,6 +82,12 @@ Review the git diff for the current branch against main. Produce a structured re
 
 ### Test Coverage
 - [PASS/WARN] N/M new public functions have tests
+
+### Outward Claims (step 6)
+- [PASS/FAIL] Named entities resolve (list any dangling pointer)
+- [PASS/FAIL] External contracts verified — name the authority consulted
+- [PASS/FAIL] Coverage claims proved per member — list the members traced
+- [PASS/FAIL] New assertions fail when the guarded behaviour breaks
 
 ### Findings
 

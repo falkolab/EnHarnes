@@ -18,6 +18,8 @@ You own the full repo. You may create, modify, and delete any file — code, scr
 
 Unsure → treat as medium. Tiers defined in `policies/risk-policy.json`.
 
+**Size is an axis too, not just kind.** A task expected to exceed the diff budget in `policies/size-policy.json` (net changed lines / files vs `main`), or to stay open longer than its branch-age budget, MUST be decomposed into independently mergeable milestones **before implementation begins** — each milestone its own PR. Declare this up front in the plan's `## Change-size` section: `large` plans list one bullet per milestone PR, enforced by `plan_size.py`. At PR time the measured diff-size and branch-staleness gates in `make review` / CI warn then block; a `SIZE-OVERRIDE: <reason>` commit line records a deliberate exception. Do not carry a weeks-long branch or a big-bang PR — split it.
+
 **HARD RULE:** For medium/high risk tasks, you MUST NOT write any implementation code until an ExecPlan exists in `docs/exec-plans/active/`. Skipping the plan is a harness violation.
 
 ### ExecPlan Minimum Content
@@ -56,6 +58,8 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Trigger | Script | What it does |
 |---------|--------|-------------|
 | Before every bash command | `validate-bash.py` (PreToolUse hook) | Blocks dangerous commands (rm -rf, force push, DROP) |
+| Before every file edit | `validate-edit.py` (PreToolUse hook) | Blocks Edit/Write/NotebookEdit when the target file's checkout is on main/master |
+| After every file edit | `post-edit-lint.py` (PostToolUse hook) | ast-grep lints the edited file, reports findings next to the edit (never blocks) |
 | Before every prompt | `prompt-validator.py` (UserPromptSubmit hook) | Blocks secrets in prompts |
 | After every response | `post-response-sync.py` (Stop hook) | Auto-syncs doc indexes if .md files changed |
 | After every subagent launch | `log-agent-usage.py` (PostToolUse hook) | Logs each Task launch to `logs/agent-usage.toon` (visibility only) |
@@ -71,8 +75,8 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Command | When to use | Duration |
 |---------|-------------|----------|
 | `make lint-todos` | Task Loop step 2: validate before starting | ~5s |
-| `make lint` | Step 8: after each change (composite: todos + src + structural) | ~10s |
-| `make review` | Step 10: pre-PR gate (5 checks: lint + structural + doc-drift + watch-paths + entropy) | ~2min |
+| `make lint` | Step 8: after each change (composite: todos + src + structural + yaml + ast + hooks) | ~15s |
+| `make review` | Step 10: pre-PR gate (6 checks: lint + structural + doc-drift + watch-paths + entropy + change-size) | ~2min |
 | `make check-entropy` | Cadenced: between tasks or weekly | ~1min |
 | `make check-docs` | Cadenced: between tasks or weekly | ~1min |
 | `make gen-handbook` | After significant doc changes | ~2min |
@@ -165,6 +169,16 @@ When an agent breaks something, **fix the harness, not the agent**. Add entries:
   **context:** In teamsBotTest project, agent did not maintain activity log during Phase 1. No audit trail.
   **fix:** Made Activity Log MANDATORY with MUST language. Logging is now Task Loop steps 3, 8, and 14.
   **enforcement:** Activity Log section with compliance language. Session without log entry = non-compliant.
+
+- **rule:** `worktree_boot.py` MUST base a new task worktree on `origin/main`, never the invoking checkout's HEAD; task worktrees live under `.claude/worktrees/<task>` (git-ignored).
+  **context:** basing off HEAD once cut a branch from a stale pre-rewrite commit (a latent non-fast-forward PR); the old `../worktree_<task>` location also sat outside the repo, so editor links into a task's files did not resolve.
+  **fix:** `resolve_base_ref()` fetches `origin` and bases the worktree on `origin/main` (offline fallback: local `main`); worktrees are created at `.claude/worktrees/<task>`, git-ignored, documented in `WORKTREE_WORKFLOW.md`.
+  **enforcement:** `resolve_base_ref()` in `worktree_boot.py` + `scripts/verify/verify_worktree_boot.py` (`make verify-worktree`, path-scoped CI job).
+
+- **rule:** A task MUST NOT grow into a big-bang PR or a weeks-long branch. Size is a first-class risk axis: over-budget work is decomposed into independently mergeable milestone PRs before implementation.
+  **context:** The harness classified risk only by *kind* (docs/refactor/architecture), never by *size* or *duration*. A multi-week refactor across hundreds of files passed the same gates as a five-line fix — nothing measured the diff, noticed a branch rotting against `main`, or forced decomposition.
+  **fix:** Two-layer guard, warn→block with a `SIZE-OVERRIDE: <reason>` escape hatch. Plan-time: `plan_size.py` (in `make lint-todos`) makes a `large` plan prove decomposition in its `## Change-size` section. PR-time: `pre_pr_gate.py` + a PR-scoped CI job measure diff size and branch staleness (via `change_size.py`) against `policies/size-policy.json`.
+  **enforcement:** `plan_size.py` (plan-time, CI-blocking via `lint-todos`); the diff-size + branch-staleness steps in `pre_pr_gate.py` and the CI job (PR-time); thresholds in `policies/size-policy.json`.
 
 ## Slash Commands
 
