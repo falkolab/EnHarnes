@@ -1,3 +1,13 @@
 dist/
 __pycache__/
 *.pyc
+
+# Local environment bridged into task worktrees by worktree_boot.py.
+# NO trailing slash: a trailing slash matches only a DIRECTORY, and these are
+# bridged as SYMLINKS — git sees a link, so `.venv/` would not cover `.venv`,
+# and an uncovered symlink gets committed, leaking this machine's absolute path.
+.env
+.venv
+
+# Ephemeral agent task worktrees (see WORKTREE_WORKFLOW.md)
+.claude/worktrees/
