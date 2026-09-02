@@ -11,25 +11,48 @@ Review the git diff for the current branch against main. Produce a structured re
 
 ## Steps
 
+0. Read `REVIEW.md` at the repo root — the binding review policy. It defines the
+   review passes (bugs / security / compliance / code documentation), the
+   severity bar, the nit cap, the do-not-report list, and the output contract.
+   Where this file and `REVIEW.md` differ, `REVIEW.md` wins.
+
 1. Run `git diff main...HEAD --name-only` and `git diff main...HEAD --stat` to scope the changes.
 
-2. Read `ARCHITECTURE.md`. For each changed file verify:
+2. **Bugs pass** (REVIEW.md pass 1) — read the changed code for logic errors,
+   broken edge cases, subtle regressions, and error paths that swallow or
+   mislabel failures.
+
+3. **Security pass** (REVIEW.md pass 2) — check for injection risks,
+   authentication/authorization gaps, fail-open behavior on error, secrets or
+   PII in code/logs/diffs, and — where the project has tenant or permission
+   boundaries — scoping bypasses across them.
+
+4. **Code documentation pass** (REVIEW.md pass 4) — public symbols have honest
+   docstrings (purpose + non-obvious contract); comments state constraints, not
+   narration or change justifications; no change-log residue (dates, "was
+   previously", authorship notes, commented-out code — history lives in git);
+   docstrings match current behavior.
+
+The remaining steps are the **Compliance pass** (REVIEW.md pass 3):
+
+5. Read `ARCHITECTURE.md`. For each changed file verify:
    - File is in the correct layer directory
    - No backward imports (dependency direction is forward-only)
    - Cross-cutting concerns go through Providers only
    - Data is validated at layer boundaries
 
-3. Read `docs/GOLDEN_PRINCIPLES.md`. Check each changed file against all 13 principles. Flag violations with principle number, file, and line.
+6. Read `docs/GOLDEN_PRINCIPLES.md`. Check each changed file against all 13 principles. Flag violations with principle number, file, and line.
 
-4. Read `policies/risk-policy.json`. Check:
+7. Read `policies/risk-policy.json`. Check:
    - Are watch-path docs updated for changed source dirs?
    - Does the change match its declared risk tier?
+   - For a medium/high-risk change, locate its ExecPlan in `docs/exec-plans/` and verify the diff matches the plan's scope and steps.
 
-5. For each new or changed public function:
+8. For each new or changed public function:
    - Does a corresponding test exist?
    - Are error paths and edge cases covered?
 
-6. **Resolve every claim the diff makes about things outside the diff.** The steps
+9. **Resolve every claim the diff makes about things outside the diff.** The steps
    above compare the code against *rules*; this one compares it against *reality*.
    A claim you could not resolve is a finding, not a footnote.
 
@@ -56,9 +79,11 @@ Review the git diff for the current branch against main. Produce a structured re
    If the task prompt handed you a list of things to check, treat it as a floor and
    not a ceiling. The expensive defects are the ones nobody thought to name.
 
-7. If `.claude/skills/harness.anti-overengineering/SKILL.md` exists, read it and check all 12 rules against the changes.
+10. If `.claude/skills/harness.anti-overengineering/SKILL.md` exists, read it and check all 12 rules against the changes.
 
-8. Output a structured review:
+11. Before filing a finding, check the Failure Ledger in `AGENTS.md` for prior instances of the same class; if this is a repeat, say so and recommend a ledger entry or a linter rule (REVIEW.md feedback rule) instead of only reporting the instance.
+
+12. Output a structured review:
 
 ```
 ## Agent Review Report
@@ -91,8 +116,8 @@ Review the git diff for the current branch against main. Produce a structured re
 
 ### Findings
 
-| Severity | File | Line | Finding | Recommendation |
-|----------|------|------|---------|----------------|
+| Pass | Severity | File | Line | Finding | Recommendation |
+|------|----------|------|------|---------|----------------|
 | CRITICAL | ... | ... | ... | ... |
 | WARNING  | ... | ... | ... | ... |
 | INFO     | ... | ... | ... | ... |
@@ -103,9 +128,11 @@ Review the git diff for the current branch against main. Produce a structured re
 
 ## Severity levels
 
+Defined in `REVIEW.md` (the source of truth). In short:
+
 - **CRITICAL** — Architecture break, security risk, data loss. Must fix before merge.
 - **WARNING** — Potential bug, missing test, principle violation. Should fix.
-- **INFO** — Observation, suggestion. Optional.
+- **INFO** — Observation, suggestion (a nit). Optional; capped at 5 per review — summarize the rest as a count.
 
 ## Constraints
 

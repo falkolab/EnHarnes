@@ -18,13 +18,19 @@ For trivial / low-risk changes the panel is unnecessary — `make review` (Task 
 
 **See also / when to use which.** `make review` is the fast, single-context gate you run on *every* change. This panel sits **above** the `reviewer` subagent: multi-lens, parallel, independently-arbitrated, and reserved for **High-risk** work. Use it **in addition to** `make review`, not instead of it.
 
+## Policy
+
+All lenses apply the shared review policy in **`REVIEW.md`** (repo root):
+severity bar, nit cap, do-not-report list, output contract. Give each subagent
+that instruction — the lens sets the *focus*, `REVIEW.md` sets the *rules*.
+
 ## Lenses
 
 Pick lenses to fit the task; a typical set for code:
 
 1. **Architectural cleanliness** — layer boundaries (`policies/architecture.yaml`, `ARCHITECTURE.md`), logic living in the right layer, interface design, file size (soft limit), idiomatic style, dead code / duplication, clean wiring.
 2. **Security** — for money / access paths: is the invariant actually enforced? bypasses? fail-closed on error? idempotency / replay? parameterized SQL? regressions in the touched paths? secret / bearer-token exposure?
-3. **Completeness + documentation coverage** — are all plan steps implemented? all read/write paths updated? do the tests cover the stated cases (fail-before / pass-after)? are the docs reconciled with reality (no stale claims — grep for old terms)? are the plan's living sections honest? trackers in sync?
+3. **Completeness + documentation coverage** — are all plan steps implemented? all read/write paths updated? do the tests cover the stated cases (fail-before / pass-after)? are the docs reconciled with reality (no stale claims — grep for old terms)? are the plan's living sections honest? trackers in sync? code documentation complete and honest (REVIEW.md pass 4: docstrings on public symbols, constraint-stating comments, no change-log residue)?
 
 Scale the number of lenses to the change: 2 for a medium change, 3–4 for High-risk. **One lens per subagent** — do not mix them, or reviewers duplicate findings and coverage drops.
 
