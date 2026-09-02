@@ -90,6 +90,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 
 - **Weekly / between tasks:** `make check-entropy`, `make check-docs`
 - **Monthly / when drift:** `python .claude/skills/harness.ci/scripts/measure_metrics.py`
+- **Monthly (security):** run the `security-orchestrator` subagent as a whole-tree scan of the latest `main` (not a diff review — it examines all source, regardless of what changed recently); triage findings into the tech-debt tracker or an ExecPlan.
 
 ### DO NOT USE
 
