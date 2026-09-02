@@ -48,7 +48,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 8. **Implement** — small steps. `make lint` after each change. Log each tool/command in Activity Log.
 9. **Doc drift** — check `policies/risk-policy.json` → `docsDriftRules`. Update matching docs.
 10. **Pre-PR** — `make review`. 🚫 STOP — fix all failures before proceeding.
-11. **Agent review** — for medium/high risk: launch subagent in reviewer role (fresh context, no shared assumptions).
+11. **Agent review** — for medium/high risk: launch subagent in reviewer role (fresh context, no shared assumptions). Review policy: `REVIEW.md`.
 12. **Review loop** — respond to feedback until approved.
 13. **Merge + teardown** — merge PR, remove worktree.
 14. **Log end** — finalize Activity Log entry. Update `progress.txt`.
@@ -115,6 +115,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Topic | File | When to load |
 |-------|------|-------------|
 | Onboarding guide | `ONBOARDING.md` | New project bootstrap (RFP → docs → code) |
+| Review policy (passes, severity bar, nit cap) | `REVIEW.md` | Any review: reviewer subagent, review-panel lenses, ad-hoc diff review |
 | Architecture + quality grades | `ARCHITECTURE.md` | Architecture decisions |
 | Architecture checklist | `.claude/skills/harness.core/docs/ARCHITECTURE_CHECKLIST.md` | Writing or validating ARCHITECTURE.md |
 | Core skill (docs, templates, examples) | `.claude/skills/harness.core/SKILL.md` | Setting up harness in a new project |
