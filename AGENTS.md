@@ -150,6 +150,7 @@ Launch subagents by role name. If `.claude/agents/harness/<role>.md` exists, it 
 |------|---------|
 | researcher | Pre-planning codebase research. Facts only, no opinions. |
 | reviewer | Independent pre-PR review. Fresh context, read-only. |
+| verifier | Final live check: runs the app, exercises the changed behavior + nearest neighboring flows, reports only (never fixes). Use before reporting a runtime-visible change done. |
 | codebase-analyzer | Analyze HOW code works — trace data flow. |
 | codebase-locator | Find WHERE code lives — file search by topic. |
 | security-orchestrator | Multi-phase security investigation. |
@@ -234,6 +235,7 @@ Verification tools are a first-class part of the project. Build them alongside f
 
 Principles:
 - If you can't verify it without a human, design it differently
+- For runtime-visible changes, finish with the `verifier` subagent (fresh context, runs the app, reports only) — the implementer's own feedback loop is not the final check
 - Verification scripts live in `tests/` or `scripts/verify/`
 - Every ExecPlan must have a "Verification" section with concrete commands
 - Prefer executable checks over manual inspection — automate judgment out of the loop
