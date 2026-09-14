@@ -149,6 +149,17 @@ def _blob(cache: Path, commit: str, path: str) -> bytes | None:
     return proc.stdout if proc.returncode == 0 else None
 
 
+# `git clone --bare` writes a remote with a URL and NO fetch refspec — unlike a
+# normal clone, which gets `+refs/heads/*:refs/remotes/origin/*`. Without one,
+# `git fetch origin` updates FETCH_HEAD and nothing else, so every branch in the
+# mirror stays frozen at the moment it was cloned. The tool then reported "up to
+# date" for as long as the cache existed, whatever upstream did: a silent wrong
+# answer from the one command whose entire job is to notice movement. Setting the
+# refspec explicitly (rather than cloning `--mirror`) keeps push semantics off a
+# cache we only ever read.
+_MIRROR_REFSPEC = "+refs/heads/*:refs/heads/*"
+
+
 def refresh_cache(cache: Path, url: str, offline: bool) -> None:
     """Clone or update the bare mirror of upstream under .harness-cache/."""
     if not cache.exists():
@@ -159,11 +170,12 @@ def refresh_cache(cache: Path, url: str, offline: bool) -> None:
             _git(["clone", "--bare", "--quiet", url, str(cache)])
         except SyncError as exc:
             raise SyncError(f"cannot reach upstream {url} — {exc}") from exc
-        return
     if offline:
         return
+    # Idempotent, and it repairs a cache cloned before this was understood.
+    _git(["config", "remote.origin.fetch", _MIRROR_REFSPEC], cwd=cache)
     try:
-        _git(["fetch", "--quiet", "--prune", "origin"], cwd=cache)
+        _git(["fetch", "--quiet", "--prune", "--force", "origin"], cwd=cache)
     except SyncError as exc:
         raise SyncError(
             f"cannot refresh upstream cache from {url} (offline? VPN?) — {exc}"
