@@ -11,3 +11,7 @@ __pycache__/
 
 # Ephemeral agent task worktrees (see WORKTREE_WORKFLOW.md)
 .claude/worktrees/
+
+# Bare mirror of the upstream template, maintained by upstream_sync.py.
+# Rebuildable from the URL in .claude/skills/harness.upstream/state.json.
+.harness-cache/
