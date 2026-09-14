@@ -209,15 +209,32 @@ def main() -> int:
         if run_tool(project, "inbound")["commits"]:
             failures.append("inbound still reports commits after the baseline advanced")
 
+        # ...and the mirror must keep up from here on. `git clone --bare` writes no
+        # fetch refspec, so `git fetch origin` updated nothing and the cache stayed
+        # frozen at clone time — while inbound kept answering "up to date", the one
+        # wrong answer this tool must never give. The fixture could not catch it
+        # until now, because upstream never moved after the cache existed.
+        write(upstream, "tracked/later.txt", "landed after the cache was built")
+        git(["add", "-A"], upstream)
+        git(["commit", "--quiet", "-m", "upstream moves again"], upstream)
+        moved = run_tool(project, "inbound")
+        if len(moved["commits"]) != 1:
+            failures.append(
+                f"inbound saw {len(moved['commits'])} commit(s) after upstream moved "
+                "past the baseline, expected 1 — the mirror is not being refreshed"
+            )
+        if "tracked/later.txt" not in {row["path"] for row in moved["files"]}:
+            failures.append("inbound did not report a file added upstream after the cache existed")
+
     if failures:
         print("[verify-upstream-sync] FAIL")
         for line in failures:
             print(f"  - {line}")
         return 1
-    total = len(EXPECT_INBOUND) + len(EXPECT_OUTBOUND) + 8
+    total = len(EXPECT_INBOUND) + len(EXPECT_OUTBOUND) + 10
     print(
-        f"[verify-upstream-sync] OK: {total} assertions hold "
-        "(5 inbound verdicts, 2 outbound kinds, 4 diff cases, baseline advance)."
+        f"[verify-upstream-sync] OK: {total} assertions hold (5 inbound verdicts, "
+        "2 outbound kinds, 4 diff cases, baseline advance, mirror refresh)."
     )
     return 0
 
