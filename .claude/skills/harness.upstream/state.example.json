@@ -1,0 +1,97 @@
+{
+  "_readme": "Copy this file to state.json and fill it in. state.json is per-fork: it records which template you came from, how far you have reviewed, what you deliberately keep different, and what you have sent back. The template ships only this example, because the template is nobody's fork.",
+  "cadenceDays": 30,
+  "upstream": {
+    "name": "TEMPLATE-NAME",
+    "url": "https://github.com/OWNER/REPO.git",
+    "ref": "main",
+    "pullRequests": "https://github.com/OWNER/REPO/pulls"
+  },
+  "baseline": {
+    "commit": "FILL-IN-THE-TEMPLATE-COMMIT-YOU-FORKED-FROM",
+    "date": "YYYY-MM-DD",
+    "adoptedOn": "YYYY-MM-DD",
+    "note": "Bootstrap: the template commit this fork was copied from."
+  },
+  "trackedPaths": [
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "CLAUDE.md",
+    "ONBOARDING.md",
+    "README.md",
+    "Makefile",
+    "progress.txt",
+    "requirements.txt",
+    ".cursorrules",
+    ".gitignore",
+    ".claude/agents/**",
+    ".claude/hooks/**",
+    ".claude/settings.json",
+    ".claude/skills/harness.*/**",
+    ".gemini/**",
+    ".github/**",
+    "policies/**",
+    "scripts/**",
+    "docs/PROJECT_*.md",
+    "docs/TASK_WALKTHROUGH.md",
+    "docs/harness-feedback.md",
+    "docs/design-docs/ci-enforcement.md",
+    "docs/design-docs/index.md",
+    "docs/design-docs/system-spec.md",
+    "docs/exec-plans/tech-debt-tracker.md",
+    "docs/generated/**",
+    "docs/product-specs/index.md",
+    "docs/references/**"
+  ],
+  "localizedPaths": [
+    {
+      "path": "**/ours/**",
+      "reason": "This project's own material, kept inside a shared area under one `ours/` directory per area, with the area's structure preserved beneath. Never template-owned, never offered upstream. The directory convention replaces per-file entries: a new project file lands here by habit instead of needing a line in this list."
+    },
+    {
+      "path": ".claude/skills/harness.upstream/state.json",
+      "reason": "Per-project sync state: this fork's baseline, its divergence list, its contribution ledger. The skill and the tool are template material; their state file never is."
+    },
+    {
+      "path": "AGENTS.md",
+      "reason": "Project control panel — carries this project's context, autonomy tiers and reference table. Merge upstream methodology changes by hand."
+    },
+    {
+      "path": "README.md",
+      "reason": "Project front page."
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "reason": "This project's layer mapping."
+    },
+    {
+      "path": "CLAUDE.md",
+      "reason": "This project's session rules."
+    },
+    {
+      "path": "ONBOARDING.md",
+      "reason": "Bootstrap narrative, consumed once."
+    },
+    {
+      "path": "progress.txt",
+      "reason": "Per-project scratch state."
+    },
+    {
+      "path": ".gitignore",
+      "reason": "Project-specific ignores."
+    },
+    {
+      "path": ".claude/settings.json",
+      "reason": "Carries this project's own hooks. Adopt upstream schema changes by hand, keep your hook list."
+    },
+    {
+      "path": "policies/architecture.yaml",
+      "reason": "This project's layer taxonomy; deliberately diverges from the template's example."
+    },
+    {
+      "path": "policies/risk-policy.json",
+      "reason": "Watch paths name this project's layers and documents."
+    }
+  ],
+  "contributions": []
+}

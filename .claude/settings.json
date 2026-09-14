@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$(command -v python3 || command -v python) .claude/hooks/upstream-sync-due.py"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

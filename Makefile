@@ -1,4 +1,4 @@
-.PHONY: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks verify-worktree lint ci check-docs check-entropy review gen-handbook sync-todos sync-skills sync-indexes worktree obs-up obs-down install-hooks
+.PHONY: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint-upstream verify-worktree lint ci check-docs check-entropy upstream-check review gen-handbook sync-todos sync-skills sync-indexes worktree obs-up obs-down install-hooks
 
 # Python interpreter. Auto-detects python3 then python; override: make lint PYTHON=/path/to/python
 PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
@@ -52,8 +52,15 @@ lint-hooks:
 verify-worktree:
 	$(PYTHON) scripts/verify/verify_worktree_boot.py
 
+# The upstream-sync classifier, against fabricated repositories with no network.
+# In `lint` because the classifier decides what a fork takes and what it sends to
+# a public repository; a silent regression there is expensive. The pass itself
+# (`make upstream-check`) needs the network and is cadenced, not CI-blocking.
+lint-upstream:
+	$(PYTHON) scripts/verify/verify_upstream_sync.py
+
 # Composite: all CI-blocking linters (local `make lint` == the CI lint gate)
-lint: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks
+lint: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint-upstream
 
 # CI alias
 ci: lint
@@ -67,6 +74,14 @@ check-docs:
 # Entropy: orphan scripts, blank setpoints
 check-entropy:
 	$(PYTHON) $(S)/harness.linters/scripts/entropy/entropy_check.py
+
+# Upstream reconciliation: where the baseline is, what the template changed since
+# it, and what we changed in template-owned files. Read-only and needs network.
+# Monthly — see .claude/skills/harness.upstream/SKILL.md.
+upstream-check:
+	$(PYTHON) scripts/harness/upstream_sync.py status
+	$(PYTHON) scripts/harness/upstream_sync.py inbound
+	$(PYTHON) scripts/harness/upstream_sync.py outbound
 
 # === Pre-PR gate ===
 
