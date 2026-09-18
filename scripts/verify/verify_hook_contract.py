@@ -208,6 +208,22 @@ def check_prompt_validator() -> None:
 # --------------------------------------------------------------------------
 # validate-edit.py — new guard: no file edits on main
 # --------------------------------------------------------------------------
+ON_MAIN_MARKER = "agents do not write to the integration branch"
+NO_PATH_MARKER = "no resolvable target path"
+
+
+def blocked_on_main(proc: subprocess.CompletedProcess) -> bool:
+    """Blocked specifically for being on main — not via another exit-2 path.
+
+    Exit code 2 alone is not evidence: the guard also fails closed on an
+    unparsable payload and on a target it cannot resolve, so a case that only
+    checks the code would pass against a guard that had stopped reading branches.
+    """
+    return (proc.returncode == 2
+            and ON_MAIN_MARKER in proc.stderr
+            and NO_PATH_MARKER not in proc.stderr)
+
+
 def check_validate_edit(tmp: Path) -> None:
     repo = make_repo(tmp)
     target = str(repo / "src" / "thing.py")
@@ -219,12 +235,17 @@ def check_validate_edit(tmp: Path) -> None:
     proc = run_hook("validate-edit.py", pre_tool_use("Write", {"file_path": target}, cwd=str(repo)), cwd=repo)
     record(proc.returncode == 2, "validate-edit: Write on main is BLOCKED too", f"rc={proc.returncode}")
 
-    # The audit trail stays writable on main.
-    allowed = repo / "docs" / "activity-log.md"
-    allowed.parent.mkdir(parents=True, exist_ok=True)
-    allowed.write_text("log\n")
-    proc = run_hook("validate-edit.py", pre_tool_use("Edit", {"file_path": str(allowed)}, cwd=str(repo)), cwd=repo)
-    record(proc.returncode == 0, "validate-edit: activity-log stays editable on main",
+    # Nothing is exempt on main. `hook_io.ALLOWED_ON_MAIN` is an empty set carrying
+    # the reasoning: an audit-trail exemption used to live here, and a second guard
+    # then copied it while its own comment claimed the two lists could not drift.
+    # An exemption is a hole in both guards at once, so the set stays empty and this
+    # case pins that rather than the old carve-out.
+    formerly_allowed = repo / "docs" / "activity-log.md"
+    formerly_allowed.parent.mkdir(parents=True, exist_ok=True)
+    formerly_allowed.write_text("log\n")
+    proc = run_hook("validate-edit.py",
+                    pre_tool_use("Edit", {"file_path": str(formerly_allowed)}, cwd=str(repo)), cwd=repo)
+    record(blocked_on_main(proc), "validate-edit: no path is exempt on main",
            f"rc={proc.returncode} stderr={proc.stderr[:160]!r}")
 
     git(["checkout", "-q", "-b", "task/probe"], repo)
@@ -375,6 +396,142 @@ def check_post_edit_lint(tmp: Path) -> None:
 
 
 # --------------------------------------------------------------------------
+# post-bash-main-clean.py — the write that no PreToolUse guard can see
+#
+# `validate-edit` refuses Edit/Write on `main`. A shell command reaches the same
+# files by a route it cannot inspect, so this hook watches the effect instead of
+# the command. The cases below therefore never assert on a command string: they
+# dirty the checkout by hand and ask whether the hook noticed.
+#
+# EVERY case here must go red if the hook body is replaced by `return`. That is not
+# a stylistic preference: a hook that exits 0 is indistinguishable from a hook that
+# is dead, so a bare "expect silence" assertion passes against a corpse. The first
+# draft of this suite had five such cases out of seven — all of them green against a
+# gutted hook, all of them claiming to prove an exclusion worked. Each "silence" case
+# below is therefore PAIRED with a positive one in the same fixture: silence for the
+# excluded thing, a report for a control that sits right beside it. If you add a case,
+# gut `main()` and confirm yours fails before believing it.
+# --------------------------------------------------------------------------
+def check_post_bash_main_clean(tmp: Path) -> None:
+    base = tmp / "bashclean"
+    base.mkdir()
+    repo = make_repo(base)          # a repo whose only worktree is on `main`
+    (repo / "docs").mkdir()
+    (repo / "docs" / "activity-log.md").write_text("# log\n")
+    git(["add", "."], repo)
+    git(["commit", "-m", "log"], repo)
+
+    payload = post_tool_use("Bash", {"command": "echo hello"}, str(repo))
+    state = repo / ".git" / "main-clean-baseline.json"
+
+    # 1. The first look over a DIRTY tree must say what it adopted. Silence here was a
+    #    real hole: the first Bash call after the state file is lost is also the call
+    #    that could have made the mess, so adopting it quietly swallows precisely the
+    #    write this guard exists to catch.
+    (repo / "README.md").write_text("pre-existing dirt\n")
+    proc = run_hook("post-bash-main-clean.py", payload, cwd=repo)
+    baseline_written = state.exists() and "README.md" in state.read_text(encoding="utf-8")
+    record(proc.returncode == 2 and "README.md" in proc.stderr and baseline_written,
+           "post-bash-main-clean: a dirty first look names what it adopted as baseline",
+           f"rc={proc.returncode} state_exists={state.exists()} stderr={proc.stderr[:200]!r}")
+
+    # 1b. A first look over a CLEAN tree has nothing to say, and must not invent it.
+    clean = tmp / "bashclean-clean"
+    clean.mkdir()
+    repo_clean = make_repo(clean)
+    proc_clean = run_hook("post-bash-main-clean.py",
+                          post_tool_use("Bash", {"command": "echo hello"}, str(repo_clean)),
+                          cwd=repo_clean)
+    (repo_clean / "ROADMAP.md").write_text("now something appears\n")
+    proc_after = run_hook("post-bash-main-clean.py",
+                          post_tool_use("Bash", {"command": "echo hello"}, str(repo_clean)),
+                          cwd=repo_clean)
+    record(proc_clean.returncode == 0 and not proc_clean.stderr.strip()
+           and proc_after.returncode == 2 and "ROADMAP.md" in proc_after.stderr,
+           "post-bash-main-clean: a clean first look is quiet, the next write is not",
+           f"first_rc={proc_clean.returncode} after_rc={proc_after.returncode} "
+           f"stderr={proc_after.stderr[:160]!r}")
+
+    # 2. Pre-existing dirt, now the baseline, does not fire again — while a file
+    #    added in the same breath DOES. One fixture, both halves: the silence is
+    #    only meaningful next to a control the hook still reports.
+    proc = run_hook("post-bash-main-clean.py", payload, cwd=repo)
+    quiet_on_known = proc.returncode == 0
+    (repo / "ROADMAP.md").write_text("written by a script\n")
+    proc = run_hook("post-bash-main-clean.py", payload, cwd=repo)
+    record(quiet_on_known and proc.returncode == 2
+           and "ROADMAP.md" in proc.stderr and "README.md" not in proc.stderr,
+           "post-bash-main-clean: known dirt stays quiet, a new write does not",
+           f"quiet={quiet_on_known} rc={proc.returncode} stderr={proc.stderr[:200]!r}")
+
+    # 3. The report names the remedy. A notice nobody can act on is the failure
+    #    mode this hook exists to avoid.
+    record("checkout --" in proc.stderr and "worktree_boot" in proc.stderr,
+           "post-bash-main-clean: the report names the remedy",
+           f"stderr={proc.stderr[:200]!r}")
+
+    # 4. Nothing is exempt on `main` (hook_io.ALLOWED_ON_MAIN is empty and says why).
+    #    An activity log was the last exception downstream, so it is the one worth
+    #    pinning: a write to it must be reported like any other. Dirtied TOGETHER with
+    #    an ordinary file so the case still proves the hook reports what it sees rather
+    #    than merely staying quiet.
+    (repo / "docs" / "activity-log.md").write_text("# log\n- entry\n")
+    (repo / "AGENTS.md").write_text("ordinary file\n")
+    proc = run_hook("post-bash-main-clean.py", payload, cwd=repo)
+    record(proc.returncode == 2
+           and "AGENTS.md" in proc.stderr and "activity-log" in proc.stderr,
+           "post-bash-main-clean: no path is exempt",
+           f"rc={proc.returncode} stderr={proc.stderr[:200]!r}")
+
+    # 5. Not our tool. Same dirt, two payloads: a Read is ignored, the Bash that
+    #    follows reports it. The pair proves the silence was tool-specific rather
+    #    than universal.
+    (repo / "Makefile").write_text("# new\n")
+    proc_read = run_hook("post-bash-main-clean.py",
+                         post_tool_use("Read", {"file_path": str(repo / "Makefile")}, str(repo)),
+                         cwd=repo)
+    proc_bash = run_hook("post-bash-main-clean.py", payload, cwd=repo)
+    record(proc_read.returncode == 0 and not proc_read.stderr.strip()
+           and proc_bash.returncode == 2 and "Makefile" in proc_bash.stderr,
+           "post-bash-main-clean: a non-Bash tool is ignored, the same dirt via Bash is not",
+           f"read_rc={proc_read.returncode} bash_rc={proc_bash.returncode} "
+           f"bash_stderr={proc_bash.stderr[:160]!r}")
+
+    # 6. A repository that never had a `main` checkout has nothing to protect, and
+    #    says nothing — but prove the silence is about that, not a dead hook: the same
+    #    repository reports the moment `main` is checked out and a write appears.
+    detached = tmp / "detached"
+    detached.mkdir()
+    repo2 = make_repo(detached)
+    git(["checkout", "--detach"], repo2)
+    (repo2 / "README.md").write_text("dirty but unowned\n")
+    payload2 = post_tool_use("Bash", {"command": "echo hello"}, str(repo2))
+    proc_detached = run_hook("post-bash-main-clean.py", payload2, cwd=repo2)
+    git(["checkout", "main"], repo2)                 # re-attach: now there IS a main checkout
+    run_hook("post-bash-main-clean.py", payload2, cwd=repo2)   # first look adopts the dirt
+    (repo2 / "ROADMAP.md").write_text("now it matters\n")
+    proc_attached = run_hook("post-bash-main-clean.py", payload2, cwd=repo2)
+    record(proc_detached.returncode == 0 and not proc_detached.stderr.strip()
+           and proc_attached.returncode == 2 and "ROADMAP.md" in proc_attached.stderr,
+           "post-bash-main-clean: quiet where main was never seen, live once main is back",
+           f"detached_rc={proc_detached.returncode} attached_rc={proc_attached.returncode} "
+           f"stderr={proc_attached.stderr[:160]!r}")
+
+    # 7. Going blind must be announced. A `main` checkout that WAS protected and then
+    #    detaches (history archaeology, a bisect) used to drop protection in perfect
+    #    silence, indistinguishable from "all clear", and restore it just as quietly.
+    #    It is said once, not on every command.
+    git(["checkout", "--detach"], repo2)
+    blind1 = run_hook("post-bash-main-clean.py", payload2, cwd=repo2)
+    blind2 = run_hook("post-bash-main-clean.py", payload2, cwd=repo2)
+    record(blind1.returncode == 2 and "blind" in blind1.stderr.lower()
+           and blind2.returncode == 0,
+           "post-bash-main-clean: a lapse in protection is announced once, not repeatedly",
+           f"first_rc={blind1.returncode} second_rc={blind2.returncode} "
+           f"stderr={blind1.stderr[:160]!r}")
+
+
+# --------------------------------------------------------------------------
 # Registration: a hook that exists but is not wired up enforces nothing — and
 # neither does one wired to the wrong event, or behind a matcher that misses the
 # tools it guards. Substring-matching the filename anywhere in settings.json
@@ -385,6 +542,7 @@ EXPECTED_WIRING = [
     ("validate-bash.py", "PreToolUse", ["Bash"]),
     ("validate-edit.py", "PreToolUse", ["Edit", "Write", "MultiEdit", "NotebookEdit"]),
     ("post-edit-lint.py", "PostToolUse", ["Edit", "Write", "MultiEdit"]),
+    ("post-bash-main-clean.py", "PostToolUse", ["Bash"]),
     ("prompt-validator.py", "UserPromptSubmit", []),
 ]
 
@@ -486,6 +644,7 @@ def main() -> int:
         check_prompt_validator()
         check_validate_edit(tmp)
         check_post_edit_lint(tmp)
+        check_post_bash_main_clean(tmp)
         check_edit_tool_coverage(tmp)
         check_registration()
 
