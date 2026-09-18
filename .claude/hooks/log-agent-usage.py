@@ -14,7 +14,7 @@ a logging hook must not break tool execution.
 """
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 HEADER = "agent_invocations{ts,agent,details}"
@@ -42,7 +42,7 @@ def main() -> None:
     log_path = root / LOG_REL
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     row = f"{ts}\t{agent}\t{json.dumps(details, ensure_ascii=False)}\n"
 
     new_file = not log_path.exists() or log_path.stat().st_size == 0
