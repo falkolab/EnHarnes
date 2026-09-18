@@ -211,6 +211,17 @@ def check_validate_bash() -> None:
     record("Put it under scripts/" in own_text,
            "validate-bash: a denial names what to do instead, in its own message",
            f"own_text={own_text[:160]!r}")
+    # The appended paragraph must offer all THREE responses, the third being "the
+    # step has no sanctioned tool yet — build one". It said two for a while: a rebase
+    # conflict was resolved with `git checkout --ours` on the whole file, which
+    # discards everything else that commit changed there, and the loss was invisible
+    # because nothing asserted the text. An agent offered only "stop" or "change the
+    # guard" has been handed a dead end, which is when routing around starts to look
+    # reasonable — the exact behaviour this paragraph exists to prevent.
+    appended = reason.split("\n\n", 1)[-1]
+    record("Three honest responses" in appended and "no sanctioned tool" in appended,
+           "validate-bash: a denial offers the third response, not a dead end",
+           f"appended={appended[-200:]!r}")
 
     # Fails closed rather than waving the command through.
     proc = run_hook("validate-bash.py", "this is not json")

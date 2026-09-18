@@ -111,9 +111,11 @@ _NO_WORKAROUND = (
     "This block is a decision, not an obstacle. Do NOT re-spell the command, "
     "split it, encode it, or move it into a file and run that — the guard reads "
     "the text of a Bash call, so a script file is unaudited, and routing around "
-    "a block is forbidden (AGENTS.md, DO NOT USE). Two honest responses: the "
-    "command should not run, or the guard is wrong — then fix the guard, add the "
-    "case to scripts/verify/verify_force_push_guard.py, and have the fix reviewed."
+    "a block is forbidden (AGENTS.md, DO NOT USE). Three honest responses: the "
+    "command should not run; or the guard is wrong — then fix the guard, add the "
+    "case to scripts/verify/verify_force_push_guard.py, and have the fix "
+    "reviewed; or both are right and the step you need has no sanctioned tool "
+    "yet — then build one, in committed code, and use that."
 )
 
 _FORCE_MAIN_REASON = (
