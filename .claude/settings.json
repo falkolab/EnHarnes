@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/upstream-sync-due.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/upstream-sync-due.py\""
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/validate-bash.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/validate-bash.py\""
           }
         ]
       },
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/validate-edit.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/validate-edit.py\""
           }
         ]
       }
@@ -37,7 +37,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/post-edit-lint.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/post-edit-lint.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/post-bash-main-clean.py\""
           }
         ]
       },
@@ -46,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/log-agent-usage.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/log-agent-usage.py\""
           }
         ]
       }
@@ -56,7 +65,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/prompt-validator.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/prompt-validator.py\""
           }
         ]
       }
@@ -66,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$(command -v python3 || command -v python) .claude/hooks/post-response-sync.py"
+            "command": "$(command -v python3 || command -v python) \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.claude/hooks/post-response-sync.py\""
           }
         ]
       }

@@ -64,6 +64,31 @@ def git_env() -> dict[str, str]:
     """Environment for shelling out to git, with repo-location overrides removed."""
     return {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARS}
 
+
+# Repo-relative paths an agent MAY write on the integration branch. It lives here
+# because two guards enforce the same policy from opposite sides — `validate-edit.py`
+# refuses Edit/Write, `post-bash-main-clean.py` notices a shell command that wrote —
+# and a policy expressed twice drifts. It already had: the Bash-side copy was written
+# with only the activity log and silently disagreed with this set about `progress.txt`.
+#
+# EMPTY by operator decision, 2026-09-16, and the emptiness is the point — every path
+# that was here turned out to be an exception nobody needed:
+#
+#   * `progress.txt` was inherited from the EnHarnes template and DELETED from this
+#     repository on 2026-08-04 (commit 0822231), its "where we are now" role taken over
+#     by `ROADMAP.md` and the activity log. The exception outlived the file by six
+#     weeks and was about to be copied into a second guard.
+#   * `docs/activity-log.md` was exempt so the audit trail could be reconciled in a main
+#     checkout between tasks. The owner is splitting that log into per-entry files, as
+#     already done in a sibling project, which removes the collisions that made
+#     reconciling-in-place attractive. Until then an entry is written in the task
+#     worktree like everything else.
+#
+# Keep the mechanism and the empty set rather than deleting both: an explicit "nothing
+# is exempt" is a decision a reader can find, and the next exception has to argue for
+# itself instead of arriving by inheritance.
+ALLOWED_ON_MAIN: frozenset[str] = frozenset()
+
 # Accepted spellings per logical field, most-correct first.
 _ALIASES: dict[str, tuple[str, ...]] = {
     "hook_event_name": ("hook_event_name", "hookEventName"),

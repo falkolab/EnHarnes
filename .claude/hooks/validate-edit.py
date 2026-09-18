@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """PreToolUse hook: refuse to edit files while their checkout sits on main.
 
-Closes the last hole in the "an agent never writes to main" rule. Pushing to main
-and force-pushing were already guarded (validate-bash.py) and merging is a human
-step, but nothing stopped an agent from editing files directly in a main
-checkout — the change would then land via an ordinary local commit.
+Closes the file-editing-tool hole in the "an agent never writes to main" rule:
+pushing and force-pushing were already guarded (validate-bash.py) and merging is
+a human step, but nothing stopped an agent from Edit/Write-ing files directly in
+a main checkout. NOT the last hole: Bash-mediated writes (echo / sed / python -c)
+land via `git commit`, which validate-bash.py's branch-aware commit guard asks
+about; arbitrary shell writes themselves cannot be fully mediated at the hook
+layer (review, 2026-07-29 — see the Failure Ledger).
 
 Work happens on a task branch in its own worktree:
 
@@ -15,7 +18,7 @@ from the process's working directory. Those differ more often than they look:
 task worktrees live *inside* the main checkout (`<main-root>/.claude/worktrees/`),
 so an absolute path — or one relative path too many — reaches files on `main`
 while `cwd` still reports a safe task branch. A `cwd`-based check waves that
-through.
+through. (Found by review, 2026-07-28, with a working bypass.)
 
 Fails CLOSED — blocks — whenever it cannot establish that the target is on a
 non-protected branch: unparsable payload, detached HEAD, git being unavailable,
@@ -26,8 +29,10 @@ where I am" must not read as "must be safe".
 `false` inside `.git/`, so a write to `.git/hooks/pre-commit` or `.git/config` is
 NOT blocked here — which can disarm the pre-commit `make lint` gate without
 touching a tracked file. That is deliberate — repository plumbing is not branch
-content, and Bash writes are not policed either — but do not read "an agent never
-writes to main" as covering it.
+content. The Bash-mediated path to `main` (a shell write followed by a commit) is
+covered by validate-bash.py's branch-aware `git commit` guard; arbitrary shell
+writes with no commit, and `.git/` plumbing, are the residual that the forge's
+protected branch backstops (see the Failure Ledger).
 """
 
 import subprocess
@@ -43,14 +48,13 @@ PROTECTED_BRANCHES = {"main", "master"}
 # Bookkeeping that must stay possible on main. Nothing here is project source:
 # these are the harness's own audit trail, which the operator may reconcile in a
 # main checkout between tasks.
-ALLOWED_ON_MAIN = {
-    "docs/activity-log.md",
-    "progress.txt",
-}
+# Shared with post-bash-main-clean.py, which enforces the same policy against shell
+# writes. Defined once in hook_io so the two cannot drift — they already had.
+ALLOWED_ON_MAIN = hook_io.ALLOWED_ON_MAIN
 
 GUIDANCE = (
     "Editing files on '{branch}' is blocked — agents do not write to the integration "
-    "branch (AGENTS.md; the human merges PRs).\n"
+    "branch (AGENTS.md; a human does the merging).\n"
     "Start a task worktree instead:  python scripts/harness/worktree_boot.py <task-name>\n"
     "Blocked path: {path}"
 )
@@ -147,7 +151,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # A guard must never fail OPEN. An unexpected payload shape used to raise
+    # here, and a traceback exits 1 — which Claude Code does not treat as a
+    # block, so the call went through unexamined. SystemExit (raised by
+    # hook_io.block/permission) is not an Exception, so a legitimate decision
+    # still propagates; only genuine faults land here.
     try:
         main()
-    except Exception as exc:  # a guard must not fail OPEN via exit 1 on an odd payload shape
+    except Exception as exc:
         hook_io.block(f"validate-edit: internal error — blocking to fail closed: {exc!r}")
