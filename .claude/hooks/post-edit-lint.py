@@ -114,7 +114,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Fails OPEN by design (feedback only — make lint remains the authority; a
+    # hook bug must not wedge the edit loop). Unlike the template's silent
+    # `pass`, the reason is printed: silence on a broken hook is the wrong
+    # default even when blocking would be worse.
     try:
         main()
-    except Exception:
-        pass  # never blocks, never wedges the edit loop — make lint remains the authority
+    except Exception as exc:
+        print(f"post-edit-lint: skipped — {exc!r}", file=sys.stderr)

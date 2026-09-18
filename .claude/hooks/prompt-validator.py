@@ -27,8 +27,8 @@ SECRET_PATTERNS = [
 def main():
     # read_event(), not require_event(): this hook is a best-effort scanner over
     # text the user already typed, not a gate on an action. Blocking every prompt
-    # whose payload failed to parse would wedge the session over a hook bug, and
-    # a prompt is not a destructive operation the way a bash command is.
+    # whose payload failed to parse would wedge the session over a hook bug —
+    # deliberately fails OPEN.
     event = hook_io.read_event()
     if event is None:
         return
@@ -50,7 +50,11 @@ def main():
 
 
 if __name__ == "__main__":
+    # Fails OPEN by design (best-effort scanner — a prompt is not a destructive
+    # act, and a hook bug must not wedge every prompt). Unlike the template's
+    # silent `pass`, the reason is printed: silence on a broken hook is the
+    # wrong default even when blocking would be worse.
     try:
         main()
-    except Exception:
-        pass  # best-effort scanner — a hook bug must not wedge every prompt
+    except Exception as exc:
+        print(f"prompt-validator: skipped — {exc!r}", file=sys.stderr)
