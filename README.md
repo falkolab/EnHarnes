@@ -29,6 +29,69 @@ make lint                 # everything CI enforces
 
 `ONBOARDING.md` walks a new project from requirements to first code.
 
+## The loop
+
+Every task runs this shape. The three red gates are hard stops: the agent does not proceed past one by deciding it is fine.
+
+```mermaid
+flowchart TD
+    A[Boot a worktree] --> B[make lint-todos]
+    B -->|fails| B
+    B --> C{Risk tier?}
+    C -->|Low| E[Implement in small steps<br/>make lint after each]
+    C -->|Medium / High| D[Write an ExecPlan<br/>large ⇒ ≥3 shippable milestones]
+    D --> R[Research subagent<br/>facts only]
+    R --> E
+    E --> F[Update the docs the change drifted]
+    F --> G[make review]
+    G -->|fails| E
+    G --> H[Reviewer subagent<br/>fresh context, REVIEW.md]
+    H -->|changes requested| E
+    H --> I[Merge, remove the worktree]
+
+    classDef gate fill:#fde7e9,stroke:#b42318,color:#7a271a;
+    class B,D,G gate
+```
+
+High risk stops at the plan: it is written, and a human decides whether it is built.
+
+Two things run underneath and are not steps in the loop: the **hooks**, on every command and every edit, and the **pre-commit hook**, which runs `make lint` whether or not anyone remembered to.
+
+## What it looks like
+
+**A guard refuses, and says what to do instead.** Every denial carries the same closing paragraph, appended at one place in the code so no rule can ship without it:
+
+```
+Force push to main/master is blocked — rewriting published history is an
+owner-run exception (AGENTS.md). Push a task branch and open a merge request;
+if you rebased your own branch, `--force-with-lease` on THAT branch is fine.
+
+This block is a decision, not an obstacle. Do NOT re-spell the command, split
+it, encode it, or move it into a file and run that — the guard reads the text
+of a Bash call, so a script file is unaudited, and routing around a block is
+forbidden (AGENTS.md, DO NOT USE). Three honest responses: the command should
+not run; or the guard is wrong — then fix the guard, add the case to
+scripts/verify/verify_force_push_guard.py, and have the fix reviewed; or both
+are right and the step you need has no sanctioned tool yet — then build one,
+in committed code, and use that.
+```
+
+A refusal with no third option is a dead end, and a dead end is when working around the guard starts to look reasonable.
+
+**A plan declares its own size, and the declaration is enforced.** A plan that calls itself large must show it has been cut into independently shippable pieces, before any code is written:
+
+```markdown
+## Change-size
+
+Change-size class: large
+
+- M1 — bootstrap the schema. → PR
+- M2 — migrate readers. → PR
+- M3 — migrate writers, remove the old path. → PR
+```
+
+Fewer than three and `make lint` fails, unless the section also carries `SIZE-OVERRIDE: <reason>`, which turns the block into a warning that repeats the reason. The ship token is configurable in `policies/size-policy.json`.
+
 ## What's inside
 
 | Path | What lives there |
