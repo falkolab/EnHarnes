@@ -30,9 +30,8 @@
   "plan": {
     "sectionHeading": "## Change-size",
     "classMarker": "Change-size class:",
-    "milestoneShipToken": "→ PR",
     "minMilestonesWhenLarge": 3,
-    "_forge": "milestoneShipToken is forge terminology. On GitLab set it to '→ MR' (Gitea/Forgejo also say PR); plan_size.py reads the token from here, nothing else changes."
+    "_forge": "milestoneShipToken is deliberately absent: plan_size.py accepts both '→ PR' and '→ MR' by default, since the forges differ only in the word and a plan should not stop linting when it crosses one. Set it here — to a string or a list — only to impose a single house spelling."
   },
   "_calibration": "Placeholder thresholds. Calibrate before trusting the block tier: iterate recent single-purpose commits on main (git log --format=%H -20 origin/main; git diff --numstat <c>^..<c>) or read per-PR stats from your forge's API. If the repo merges fast-forward-only, git log --merges finds nothing — measure commits, not merge commits."
 }

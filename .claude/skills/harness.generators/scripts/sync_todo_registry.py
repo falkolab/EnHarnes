@@ -18,16 +18,20 @@
 ИСПОЛЬЗОВАНИЕ:
   python3 scripts/sync_todo_registry.py
 """
-from pathlib import Path
 import re
+from pathlib import Path
 
 root = Path(__file__).resolve().parents[4]
 owner_re = re.compile(r"TODO:\s*\[(HUMAN|AI|AI->HUMAN)\]")
 
 counts = {"HUMAN": 0, "AI": 0, "AI->HUMAN": 0}
 for p in root.rglob("*.md"):
-    p_str = str(p)
-    if ".git/" in p_str or ".claude/worktrees/" in p_str:
+    # Relative to root, never absolute: in a bare-top-level layout every checkout
+    # lives under <repo>/.claude/worktrees/<name>/, so an absolute substring test
+    # skips every file (see todo_linter.py — it reported 0 of 73 TODOs). Only a
+    # worktree NESTED below root is another branch's checkout.
+    p_rel = str(p.relative_to(root) if p.is_relative_to(root) else p)
+    if ".git/" in p_rel or ".claude/worktrees/" in p_rel:
         continue  # skip nested task worktrees (other branches' checkouts)
     for line in p.read_text(encoding="utf-8").splitlines():
         m = owner_re.search(line)

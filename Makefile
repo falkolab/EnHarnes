@@ -6,8 +6,12 @@ S = .claude/skills
 
 # === Linters (CI-blocking) ===
 
-# TODO ownership & placeholder checks (~5s) + misfiled-plan + plan-size checks
+# TODO ownership & placeholder checks (~5s) + misfiled-plan + plan-size checks.
+# The two verifiers run FIRST: each linter below can pass by examining nothing,
+# and a linter that examines nothing is indistinguishable from a clean tree.
 lint-todos:
+	$(PYTHON) scripts/verify/verify_todo_linter.py
+	$(PYTHON) scripts/verify/verify_plan_size.py
 	$(PYTHON) $(S)/harness.linters/scripts/doc-health/todo_linter.py
 	$(PYTHON) $(S)/harness.linters/scripts/doc-health/misfiled_plans.py
 	$(PYTHON) $(S)/harness.linters/scripts/doc-health/plan_size.py
