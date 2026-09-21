@@ -10,9 +10,9 @@ Checks:
 Runs as part of `make lint-todos` and `make lint` (composite).
 """
 
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[5]
 OWNER_RE = re.compile(r"TODO:\s*\[(HUMAN|AI|AI->HUMAN)\]")
@@ -20,10 +20,17 @@ OWNER_RE = re.compile(r"TODO:\s*\[(HUMAN|AI|AI->HUMAN)\]")
 errors: list[str] = []
 
 for file_path in ROOT.rglob("*.md"):
-    fp_str = str(file_path)
-    # Skip .git and nested task worktrees (.claude/worktrees/<task>/… is a full
-    # checkout of another branch — its files belong to that task, not this lint).
-    if ".git/" in fp_str or ".claude/worktrees/" in fp_str:
+    # Skip .git and NESTED task worktrees — a .claude/worktrees/<task>/ directory
+    # BELOW this root is another branch's full checkout, whose files belong to that
+    # task. Match the path RELATIVE to ROOT, never the absolute path: in a
+    # bare-top-level layout every checkout, main included, itself lives at
+    # <repo>/.claude/worktrees/<name>/, so an absolute substring test matches every
+    # file and silently switches this linter off. It did — 73 owner-tagged TODOs
+    # reported as zero while `make lint` stayed green, because the check that would
+    # have said otherwise was the one disabled.
+    rel = file_path.relative_to(ROOT) if file_path.is_relative_to(ROOT) else file_path
+    rel_str = str(rel)
+    if ".git/" in rel_str or ".claude/worktrees/" in rel_str:
         continue
 
     for idx, line in enumerate(file_path.read_text(encoding="utf-8").splitlines(), start=1):

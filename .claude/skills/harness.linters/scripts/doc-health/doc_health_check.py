@@ -83,7 +83,12 @@ def check_broken_links() -> int:
                 continue
             if ref.startswith("/") or ref.startswith("python"):
                 continue
-            if not (ROOT / ref).exists():
+            # Resolve from the document's own directory as well as the repo root —
+            # the same two anchors the link check above uses. A relative path in
+            # backticks (`../intake/x.md`) is as legitimate as one in a link, and
+            # resolving it against the root alone reported every such path as
+            # broken, which buried the real breakages under false ones.
+            if not (ROOT / ref).exists() and not (md.parent / ref).exists():
                 print(
                     f"  BROKEN: {md.relative_to(ROOT)} -> {ref}. "
                     f"Fix: update the path or remove the reference."

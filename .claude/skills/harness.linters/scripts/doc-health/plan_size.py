@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Plan-size linter: enforce the decomposition contract on large ExecPlans.
 
-The harness used to classify task *risk* by kind of change, never by *size*. This
-is the plan-time half of the change-size guardrails: it makes a plan that
+The harness classifies task *risk* by kind of change, never by *size*. This is
+the plan-time half of the change-size guardrails (see the ExecPlan
+`docs/exec-plans/active/2026-07-20-mr-size-guardrails.md`): it makes a plan that
 declares itself large prove it has been cut into independently mergeable
 milestones, at the earliest possible moment — before any code is written.
 
@@ -21,7 +22,8 @@ Rules (high precision — a false positive blocks CI on a legitimate plan):
   - No `## Change-size` section, or no `Change-size class:` line in it -> WARNING
     (non-blocking nudge; existing plans predate the convention).
   - class == large: the section must list at least `minMilestonesWhenLarge`
-    milestone bullet lines, each ending with the ship token (default `→ PR`).
+    milestone bullet lines, each ending with a ship token — `→ MR` or `→ PR`,
+    both accepted, because the two forges differ only in the word.
     If it does not -> ERROR (exit 1), UNLESS the section also carries a
     `SIZE-OVERRIDE: <reason>` line, which downgrades it to a WARNING echoing the
     reason.
@@ -44,7 +46,13 @@ POLICY_PATH = ROOT / "policies" / "size-policy.json"
 DEFAULTS = {
     "sectionHeading": "## Change-size",
     "classMarker": "Change-size class:",
-    "milestoneShipToken": "→ PR",
+    # Both spellings, because the only thing that differs between forges is the
+    # word: GitHub and Gitea say "pull request", GitLab says "merge request", and
+    # the milestone is the same milestone either way. A single-token default made
+    # every fork diverge from the template on this one line — and a plan written
+    # on one forge stopped linting on the other. A string is still accepted, for
+    # a project that wants exactly one house spelling.
+    "milestoneShipToken": ["→ MR", "→ PR"],
     "minMilestonesWhenLarge": 3,
     "overrideToken": "SIZE-OVERRIDE:",
 }
@@ -106,10 +114,17 @@ def _override_reason(section: list[str]) -> str | None:
     return None
 
 
-def _count_milestones(section: list[str], ship_token: str) -> int:
+def _ship_tokens(policy: dict) -> list[str]:
+    """Accepted ship tokens, whether the policy gives one string or several."""
+    configured = policy["milestoneShipToken"]
+    tokens = [configured] if isinstance(configured, str) else list(configured)
+    return [t for t in tokens if t]
+
+
+def _count_milestones(section: list[str], ship_tokens: list[str]) -> int:
     return sum(
         1 for line in section
-        if BULLET_RE.match(line) and line.rstrip().endswith(ship_token)
+        if BULLET_RE.match(line) and line.rstrip().endswith(tuple(ship_tokens))
     )
 
 
@@ -120,13 +135,16 @@ def main() -> int:
 
     policy = _load_plan_policy()
     heading = policy["sectionHeading"]
-    ship_token = policy["milestoneShipToken"]
+    ship_tokens = _ship_tokens(policy)
+    shown = " or ".join(f"'{t}'" for t in ship_tokens)
     min_milestones = int(policy["minMilestonesWhenLarge"])
 
     errors: list[str] = []
     warnings: list[str] = []
 
-    for plan in sorted(ACTIVE_DIR.glob("*.md")):
+    # Skip *.ru.md translation companions: a gitignored copy of a plan in another
+    # language is the same plan, and linting both reports every finding twice.
+    for plan in sorted(p for p in ACTIVE_DIR.glob("*.md") if not p.name.endswith(".ru.md")):
         rel = f"docs/exec-plans/active/{plan.name}"
         text = plan.read_text(encoding="utf-8")
         section = _section_lines(text, heading)
@@ -149,21 +167,21 @@ def main() -> int:
         if cls != "large":
             continue
 
-        milestones = _count_milestones(section, ship_token)
+        milestones = _count_milestones(section, ship_tokens)
         if milestones >= min_milestones:
             continue
 
         reason = _override_reason(section)
         detail = (
             f"class is 'large' but the '{heading}' section lists {milestones} "
-            f"milestone(s) ending in '{ship_token}' (need >= {min_milestones})"
+            f"milestone(s) ending in {shown} (need >= {min_milestones})"
         )
         if reason:
             warnings.append(f"{rel}: {detail}. Overridden: {reason}")
         else:
             errors.append(
                 f"  [ERROR] {rel}: {detail}. Fix: decompose into milestones each "
-                f"ending '{ship_token}', or add 'SIZE-OVERRIDE: <reason>' to the section."
+                f"ending {shown}, or add 'SIZE-OVERRIDE: <reason>' to the section."
             )
 
     for w in warnings:
