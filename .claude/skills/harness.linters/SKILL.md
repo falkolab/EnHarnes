@@ -54,6 +54,11 @@ Run by `make lint-hooks`:
 
 - `verify_force_push_guard.py` — the force-push-to-main deny/allow table, asserted
   against the hook's `decide()`.
+- `verify_hooks_registered.py` — what `hooks_registered.py` counts as a hook that
+  must be wired. Every case fixes the SET in scope, because that is the part a
+  change can quietly shrink: an unregistered hook whose entry point was renamed
+  is still an error, a named library module is not, and a library carrying an
+  entry-point guard is warned about rather than failed.
 - `verify_hook_contract.py` — runs every hook as a subprocess against hardcoded
   real payloads and asserts each is registered under the right event with a
   matcher covering its own tool set. It guards OUR side only: the shapes are a
