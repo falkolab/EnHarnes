@@ -21,7 +21,6 @@ import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 OBS_DIR = Path(os.environ.get("OBS_DIR", ".claude/observability"))
 LOG_DIR = OBS_DIR / "logs"
@@ -64,8 +63,8 @@ def metric(name: str, value: float, **tags):
 # ---- Query API ----
 
 def query_logs(
-    level: Optional[str] = None,
-    contains: Optional[str] = None,
+    level: str | None = None,
+    contains: str | None = None,
     since_minutes: int = 60,
     limit: int = 50,
 ) -> list[dict]:
@@ -91,7 +90,7 @@ def query_logs(
 
 
 def query_metrics(
-    name: Optional[str] = None,
+    name: str | None = None,
     since_minutes: int = 60,
 ) -> list[dict]:
     """Query recent metrics. Returns list of matching data points."""
