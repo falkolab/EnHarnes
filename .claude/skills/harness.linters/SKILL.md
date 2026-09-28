@@ -36,7 +36,21 @@ Static analysis scripts that enforce code quality, architecture boundaries, docu
 
 Behavioural checks for the harness's own enforcement.
 
-Run by `make lint-hooks` (part of `make lint`):
+Seven of them, each wired to the target that owns what it guards. A verifier runs
+BEFORE the linter it covers, because a linter examining nothing is indistinguishable
+from a clean tree.
+
+Run by `make lint-todos`:
+
+- `verify_todo_linter.py` — that the TODO linter is looking at this tree at all.
+  Its fixture is rooted at `<tmp>/.claude/worktrees/main/` on purpose: in a plain
+  temp directory the bug it pins cannot manifest, and the test passed with the
+  defect reinstated.
+- `verify_plan_size.py` — the decomposition contract: milestone counting, both
+  ship tokens, the override, and the column-0 rule that stops an indented example
+  transcript from hijacking the real `## Change-size` section.
+
+Run by `make lint-hooks`:
 
 - `verify_force_push_guard.py` — the force-push-to-main deny/allow table, asserted
   against the hook's `decide()`.
@@ -49,9 +63,20 @@ Run by `make lint-hooks` (part of `make lint`):
   decision-function unit test stayed green for months while the guard it covered
   enforced nothing: test the layer that can break, not the one convenient to import.
 
-Run by **`make verify-worktree`**, not by `lint-hooks` — it does real
-`git worktree add` work, and running that from the pre-commit hook is what leaked
-`GIT_DIR` into its fixtures:
+Run by `make lint-upstream`:
+
+- `verify_upstream_sync.py` — the sync classifier against fabricated repositories,
+  with no network: the five inbound verdicts, the outbound kinds, the baseline
+  advance, and the mirror refresh that once stayed frozen at clone time.
+
+Run by `make lint-sessions`:
+
+- `verify_session_map.py` — the session-mapping case table. Every case is a bug
+  that produced plausible-but-wrong output rather than an error.
+
+Run by **`make verify-worktree`**, not by `lint` — it does real `git worktree add`
+work, and running that from the pre-commit hook is what leaked `GIT_DIR` into its
+fixtures:
 
 - `verify_worktree_boot.py` — `worktree_boot.py`'s rooting, `.env` bridging,
   per-worktree venv and ignore-refusal, including an end-to-end run of its CLI.

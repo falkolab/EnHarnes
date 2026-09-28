@@ -75,7 +75,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Command | When to use | Duration |
 |---------|-------------|----------|
 | `make lint-todos` | Task Loop step 2: validate before starting | ~5s |
-| `make lint` | Step 8: after each change (composite: todos + src + structural + yaml + ast + hooks) | ~15s |
+| `make lint` | Step 8: after each change (composite: todos + src + structural + yaml + ast + hooks + upstream + sessions) | ~15s |
 | `make review` | Step 10: pre-PR gate (5 checks: lint + doc-drift + watch-paths + entropy + change-size) | ~2min |
 | `make check-entropy` | Cadenced: between tasks or weekly | ~1min |
 | `make check-docs` | Cadenced: between tasks or weekly | ~1min |
