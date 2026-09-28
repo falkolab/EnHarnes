@@ -109,11 +109,22 @@ def main_worktree_root(start: Path) -> Path:
 
 
 def is_git_ignored(worktree_dir: Path, name: str) -> bool:
-    """Whether `name` is covered by the repo's ignore rules inside this worktree."""
-    result = subprocess.run(
-        ["git", "check-ignore", "-q", name],
-        cwd=worktree_dir, capture_output=True, env=clean_env(),
-    )
+    """Whether `name` is provably covered by the repo's ignore rules inside this worktree.
+
+    Fails SAFE: anything short of git running and answering "ignored" — git absent
+    from PATH, the directory not a repository, the call failing to start — is False,
+    so `link()` refuses to bridge rather than risk a committable symlink. Without the
+    guard the refusal path raises instead: the caller sees a traceback in place of the
+    message that says which ignore rule to add, and a boot that would have continued
+    safely stops with the wrong explanation.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "-q", name],
+            cwd=worktree_dir, capture_output=True, env=clean_env(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
     return result.returncode == 0
 
 

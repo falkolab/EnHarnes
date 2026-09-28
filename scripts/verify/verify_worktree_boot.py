@@ -182,6 +182,39 @@ def main() -> int:
             print("[OK ] refuses to bridge a name the repo does not ignore")
         (main_repo / ".gitignore").write_text(".env\n.venv\n")
 
+        # 7a-bis. The same refusal when git cannot answer AT ALL. `is_git_ignored`
+        #     documents that it fails safe — git absent from PATH, the call failing
+        #     to start — but the case above only ever exercises "git ran and said
+        #     not-ignored". Without a case here the promise is prose: the exception
+        #     path would raise instead of refusing, and the caller would get a
+        #     traceback where the refusal message belongs. Forced by making the
+        #     subprocess call itself raise, which is the one condition a fixture
+        #     cannot arrange by arranging files.
+        broken = main_repo / ".claude" / "worktrees" / "task-e"
+        broken.mkdir(parents=True, exist_ok=True)
+        real_run = boot.subprocess.run
+
+        def _git_missing(*args, **kwargs):
+            raise FileNotFoundError(2, "No such file or directory: 'git'")
+
+        boot.subprocess.run = _git_missing
+        try:
+            answered = boot.is_git_ignored(main_repo, ".env")
+            bridged = boot.link(main_repo / ".env", broken / ".env", ".env")
+        except Exception as exc:  # noqa: BLE001 — the point is that nothing escapes
+            answered, bridged = f"raised {exc!r}", None
+        finally:
+            boot.subprocess.run = real_run
+        if answered is not False or bridged is not False or (broken / ".env").is_symlink():
+            failures.append(
+                f"the ignore check did not fail safe when git could not run: "
+                f"answered={answered!r} bridged={bridged!r} "
+                f"link_created={(broken / '.env').is_symlink()}"
+            )
+            print("[FAIL] refuses to bridge when git cannot answer at all")
+        else:
+            print("[OK ] refuses to bridge when git cannot answer at all")
+
         # 7b. Unresolvable repo must STOP, not fall back to cwd. That fallback was
         #     the nesting bug, and it would fire exactly when git is misbehaving.
         outside = tmp / "not-a-repo"
