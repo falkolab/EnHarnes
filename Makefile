@@ -1,4 +1,4 @@
-.PHONY: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint-upstream verify-worktree lint ci check-docs check-entropy upstream-check review gen-handbook sync-todos sync-skills sync-indexes worktree obs-up obs-down install-hooks
+.PHONY: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint-upstream lint-sessions verify-worktree lint ci check-docs check-entropy upstream-check review gen-handbook sync-todos sync-skills sync-indexes worktree obs-up obs-down install-hooks
 
 # Python interpreter. Auto-detects python3 then python; override: make lint PYTHON=/path/to/python
 PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
@@ -63,8 +63,15 @@ verify-worktree:
 lint-upstream:
 	$(PYTHON) scripts/verify/verify_upstream_sync.py
 
+# The session-mapping tool behind the worktree-hygiene skill, against fabricated
+# transcripts. In `lint` because every case in it is a bug that once shipped as
+# plausible-but-wrong output rather than an error — the failure mode that makes a
+# session-mapping tool worse than no tool, since its answers read like facts.
+lint-sessions:
+	$(PYTHON) scripts/verify/verify_session_map.py
+
 # Composite: all CI-blocking linters (local `make lint` == the CI lint gate)
-lint: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint-upstream
+lint: lint-todos lint-src lint-structural lint-yaml lint-ast lint-hooks lint-upstream lint-sessions
 
 # CI alias
 ci: lint
