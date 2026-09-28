@@ -127,6 +127,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | CI/merge policy | `docs/design-docs/ci-enforcement.md` | CI or merge config changes |
 | Execution plans | `.claude/skills/harness.plan/SKILL.md` | ExecPlans for medium/high risk |
 | Worktree workflow | `.claude/skills/harness.core/docs/WORKTREE_WORKFLOW.md` | Boot script issues |
+| Worktree & session hygiene | `.claude/skills/worktree-hygiene/SKILL.md` | Retiring a worktree or branch without stranding what lives outside git |
 | Observability | `docs/PROJECT_OBSERVABILITY.md` | Logging or metrics |
 | Browser automation | `.claude/skills/harness.core/docs/BROWSER_AUTOMATION.md` | UI testing |
 | Entropy management | `.claude/skills/harness.core/docs/ENTROPY_PRINCIPLES.md` | Entropy scans |
