@@ -2,7 +2,7 @@
   "version": 1,
   "description": "When code in a watchPath changes, verify that the listed docs are still accurate.",
   "tiers": ["low", "medium", "high"],
-  "watchPaths": ["src/", ".claude/skills/", "policies/", "scripts/harness/", "scripts/verify/"],
+  "watchPaths": ["src/", ".claude/skills/", "policies/", "scripts/harness/", "scripts/verify/", "Makefile"],
   "docsDriftRules": [
     {
       "watch": "src/",
@@ -53,6 +53,20 @@
     {
       "watch": "scripts/verify/",
       "docs": [
+        ".claude/skills/harness.linters/SKILL.md"
+      ]
+    },
+    {
+      "watch": ".claude/skills/",
+      "docs": [
+        "README.md",
+        "AGENTS.md"
+      ]
+    },
+    {
+      "watch": "Makefile",
+      "docs": [
+        "README.md",
         ".claude/skills/harness.linters/SKILL.md"
       ]
     }

@@ -100,8 +100,8 @@ Fewer than three and `make lint` fails, unless the section also carries `SIZE-OV
 | `CLAUDE.md` | Session rules specific to the Claude Code CLI |
 | `ARCHITECTURE.md` · `policies/` | Layer map, risk tiers, size budgets, machine-readable lint rules |
 | `REVIEW.md` | The single review policy — passes, severity bar, what not to report |
-| `.claude/hooks/` | Eight hooks that run automatically: two guards, two reporters, three session and lifecycle hooks, one shared wire contract |
-| `.claude/skills/` | Eleven skills — planning, linters, generators, review panel, upstream sync, debugging protocol |
+| `.claude/hooks/` | Eight hooks that run automatically — two guards, two reporters, four session and lifecycle hooks — over one shared wire contract |
+| `.claude/skills/` | Thirteen skills — planning, linters, generators, review panel, upstream sync, debugging protocol, document clarity, worktree and session hygiene |
 | `.claude/agents/harness/` | Nine subagent roles: researcher, reviewer, verifier, and six analysers |
 | `scripts/harness/` | Worktree bootstrap, upstream sync, the pre-commit hook |
 | `scripts/verify/` | Behavioural checks on the harness itself — the guards are tested, not trusted |
@@ -116,7 +116,7 @@ make review        # pre-PR gate: lint + doc drift + watch paths + entropy + cha
 make ci            # alias for lint
 ```
 
-`make lint` runs seven checks: TODO ownership and plan placement (`lint-todos`), code conventions and hook registration (`lint-src`), architecture boundaries (`lint-structural`), lint-rule YAML (`lint-yaml`), `ast-grep` scan (`lint-ast`), the hook contract and force-push table (`lint-hooks`), and the upstream classifier (`lint-upstream`).
+`make lint` runs eight checks: TODO ownership and plan placement (`lint-todos`), code conventions and hook registration (`lint-src`), architecture boundaries (`lint-structural`), lint-rule YAML (`lint-yaml`), `ast-grep` scan (`lint-ast`), the hook contract and force-push table (`lint-hooks`), the upstream classifier (`lint-upstream`), and the session-mapping case table (`lint-sessions`).
 
 Cadenced, not per-commit:
 
