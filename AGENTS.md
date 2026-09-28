@@ -136,6 +136,7 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Example project | `.claude/skills/harness.core/example/` | Reference for `src/` layout + `architecture.yaml` |
 | Anti-overengineering | `.claude/skills/harness.anti-overengineering/SKILL.md` | Startup-style pragmatic rules |
 | Debugging protocol | `.claude/skills/debugging-protocol/SKILL.md` | Investigating a bug/failing test before writing a fix |
+| Document clarity | `.claude/skills/doc-clarity/SKILL.md` | Writing or editing any document — matching the register to its reader |
 | Review panel (multi-lens) | `.claude/skills/harness.review-panel/SKILL.md` | High-risk changes: parallel reviewer subagents + arbitration |
 | Harness feedback | `docs/harness-feedback.md` + `.claude/skills/harness.feedback/SKILL.md` | Friction you noticed in the harness itself |
 | Linters | `.claude/skills/harness.linters/SKILL.md` | Architecture, code health, doc health, pre-PR gates |
