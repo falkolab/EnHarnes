@@ -116,7 +116,7 @@ make review        # pre-PR gate: lint + doc drift + watch paths + entropy + cha
 make ci            # alias for lint
 ```
 
-`make lint` runs eight checks: TODO ownership and plan placement (`lint-todos`), code conventions and hook registration (`lint-src`), architecture boundaries (`lint-structural`), lint-rule YAML (`lint-yaml`), `ast-grep` scan (`lint-ast`), the hook contract and force-push table (`lint-hooks`), the upstream classifier (`lint-upstream`), and the session-mapping case table (`lint-sessions`).
+`make lint` runs eight checks: TODO ownership and plan placement (`lint-todos`), code conventions and hook registration (`lint-src`), architecture boundaries (`lint-structural`), lint-rule YAML (`lint-yaml`), `ast-grep` scan (`lint-ast`), the hook contract, the force-push table and the registration scope (`lint-hooks`), the upstream classifier (`lint-upstream`), and the session-mapping case table (`lint-sessions`).
 
 Cadenced, not per-commit:
 

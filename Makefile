@@ -44,6 +44,7 @@ lint-ast:
 # (a hook reading the wrong payload keys parses nothing, no-ops, and its unit
 # tests stay green).
 lint-hooks:
+	$(PYTHON) scripts/verify/verify_hooks_registered.py
 	$(PYTHON) scripts/verify/verify_force_push_guard.py
 	$(PYTHON) scripts/verify/verify_hook_contract.py
 

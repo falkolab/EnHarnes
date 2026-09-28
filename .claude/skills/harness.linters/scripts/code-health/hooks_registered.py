@@ -52,24 +52,40 @@ def _registered_commands(sources: list[Path]) -> str:
     return "\n".join(blob)
 
 
-def _is_hook(path: Path) -> bool:
-    """A hook is an executable entry point; a shared library module is not.
+# Shared modules the hooks import — libraries, not hooks, so nothing registers
+# them. Everything else in .claude/hooks/*.py must be wired. Naming the
+# exemptions is the whole point: the rule cannot quietly grow.
+#
+# The discriminator used to be behavioural — a file counted as a hook if it
+# contained an entry-point guard. That exempts on the absence of a line, so a
+# real hook whose guard is renamed, removed, or written another way stops being
+# a hook FOR THIS CHECK, and the check then reports that every hook is
+# registered. It goes quiet exactly when something changed.
+#
+# Deny by default costs one line here when a genuine shared module is added, and
+# the linter says so loudly until the line is written.
+_LIBRARY_MODULES = {"__init__.py", "hook_io.py"}
 
-    `hook_io.py` (the wire-contract module the hooks import) lives in the same
-    directory but is never registered — requiring registration for it would force
-    a fake settings entry. The discriminator is the entry-point guard every
-    actual hook carries.
-    """
-    if path.name == "__init__.py":
-        return False
+
+def _looks_like_an_entry_point(path: Path) -> bool:
+    """Whether an exempted file carries the guard an executable hook would."""
     try:
         return 'if __name__ == "__main__"' in path.read_text(encoding="utf-8")
     except OSError:
-        return True  # unreadable: keep it in scope rather than silently exempting
+        return False
 
 
 def main() -> int:
-    hook_files = sorted(p for p in HOOKS_DIR.glob("*.py") if _is_hook(p))
+    hook_files = sorted(p for p in HOOKS_DIR.glob("*.py") if p.name not in _LIBRARY_MODULES)
+    # The entry-point guard is still read — as the opposite signal. A file
+    # exempted as a library that nonetheless carries one is a hook hiding behind
+    # the exemption. A warning, not an error: it is a smell, not a fact.
+    for lib in sorted(HOOKS_DIR.glob("*.py")):
+        if lib.name in _LIBRARY_MODULES and lib.name != "__init__.py" and _looks_like_an_entry_point(lib):
+            print(
+                f"  [WARN] {lib.name} is exempted as a library module but has an "
+                "entry-point guard — a hook in disguise?"
+            )
     if not hook_files:
         print("[hooks-registered] OK: no hook scripts to check.")
         return 0
