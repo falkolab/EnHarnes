@@ -66,7 +66,6 @@ Every task MUST follow this loop. Steps marked 🚫 STOP are hard gates — do n
 | Before every commit | `pre-commit` hook | Runs `make lint` — blocks commit on failure |
 | On PR / push to main | `ci.yml` workflow | Lint + doc-drift check |
 | Daily 03:00 UTC | `nightly-entropy.yml` | Entropy scan |
-| Monday 06:00 UTC | `weekly-cleanup.yml` | Auto-fixes TODO owners, creates cleanup PR |
 
 **You do NOT need to call any of these.** They fire automatically. The pre-commit hook also means `make lint` runs before every commit — you don't need to lint right before committing.
 

@@ -118,8 +118,8 @@
 | 7.1 | ENTROPY.md doc defining drift sources and cleanup cadence | Y | `.claude/skills/harness.core/docs/ENTROPY_PRINCIPLES.md` |
 | 7.2 | Entropy check script (stale docs, dead scripts, orphan TODOs) | Y | `.claude/skills/harness.linters/scripts/entropy/entropy_check.py` |
 | 7.3 | Quality grades per domain/layer (A/B/C/D with tracking) | Y | `ARCHITECTURE.md` → Quality Grades table |
-| 7.4 | Background Codex tasks for refactoring PRs | Y | `.github/workflows/weekly-cleanup.yml` (авто-фикс энтропии + создание PR) |
-| 7.5 | Nightly/weekly entropy scan separate from PR CI | Y | `.github/workflows/nightly-entropy.yml` (daily 03:00 UTC), `.github/workflows/weekly-cleanup.yml` (weekly Mon 06:00 UTC) |
+| 7.4 | Background Codex tasks for refactoring PRs | N | None. `weekly-cleanup.yml` was removed: its auto-fix never ran (the exit code it tested was `tee`'s), and it rewrote TODO owners, which is not what the entropy check reports |
+| 7.5 | Nightly/weekly entropy scan separate from PR CI | Y | `.github/workflows/nightly-entropy.yml` (daily 03:00 UTC) |
 | 7.6 | Tech-debt tracker doc | Y | `docs/exec-plans/tech-debt-tracker.md` |
 
 ---
@@ -132,7 +132,7 @@
 | 8.2 | CI runs lint + typecheck + structural tests + unit tests | Y | `.github/workflows/ci.yml` (make lint → doc-drift), `.claude/skills/harness.linters/scripts/lint_runner.py`, `.claude/skills/harness.linters/scripts/typecheck.py` |
 | 8.3 | Minimal blocking merge gates (speed over perfection) | Y | `docs/design-docs/ci-enforcement.md` |
 | 8.4 | Short-lived PRs, flakes addressed with follow-up runs | Y | `docs/design-docs/ci-enforcement.md` |
-| 8.5 | CI config as code in repo (.github/workflows/) | Y | `.github/workflows/ci.yml`, `.github/workflows/nightly-entropy.yml`, `.github/workflows/weekly-cleanup.yml` |
+| 8.5 | CI config as code in repo (.github/workflows/) | Y | `.github/workflows/ci.yml`, `.github/workflows/nightly-entropy.yml`, `.github/workflows/verify-worktree.yml` |
 | 8.6 | `make ci` = exact local reproduction of CI pipeline | Y | `Makefile` target `ci` |
 | 8.7 | Throughput-aware: designed for agent output > human review bandwidth `[OAI]` | P | `.claude/skills/harness.core/docs/CORE_PRINCIPLES.md` Principle #3: "Corrections Are Cheap. Blocking Is Expensive." + `control-loop-metrics.yaml` → merge_cycle_time. Философия есть, но нет явного обсуждения tradeoff agent throughput vs human bandwidth |
 
@@ -181,7 +181,7 @@
 | # | Practice | | Файлы |
 |---|----------|-|-------|
 | 12.1 | Product code and tests | — | Нет application code (EnHarnes — harness-фреймворк, не приложение) |
-| 12.2 | CI configuration and release tooling | Y | `.github/workflows/ci.yml`, `.github/workflows/nightly-entropy.yml`, `.github/workflows/weekly-cleanup.yml` |
+| 12.2 | CI configuration and release tooling | Y | `.github/workflows/ci.yml`, `.github/workflows/nightly-entropy.yml`, `.github/workflows/verify-worktree.yml` |
 | 12.3 | Internal developer tools (scripts, linters) | Y | `.claude/skills/harness.linters/scripts/` (10 скриптов), `.claude/skills/harness.ci/scripts/` (1 скрипт), `policies/ast-grep/` (5 правил) |
 | 12.4 | Documentation and design history | Y | `docs/generated/project-handbook.md`, `docs/generated/todo-registry.md`, `docs/generated/db-schema.md` |
 | 12.5 | Scripts that manage the repository itself | Y | `.claude/skills/harness.generators/scripts/` (build_handbook, sync_doc_indexes, sync_skills_to_agents, sync_todo_registry), `scripts/harness/worktree_boot.py` |
