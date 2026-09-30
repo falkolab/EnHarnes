@@ -13,5 +13,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      # Through the Makefile, not a script path: the path is the part that moves.
+      # This step named scripts/harness/entropy/entropy_check.py long after the
+      # linters moved into .claude/skills/harness.linters/, and failed every night
+      # on "No such file" rather than on anything the check looks for.
       - name: Run entropy check
-        run: python3 scripts/harness/entropy/entropy_check.py
+        run: make check-entropy
